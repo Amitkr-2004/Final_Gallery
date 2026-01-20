@@ -1,0 +1,80 @@
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 50%,
+    var(--bg-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Skeleton variants */
+.skeleton-card {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius-lg);
+}
+
+.skeleton-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-full);
+}
+
+.skeleton-text {
+  width: 100%;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+}
+
+.skeleton-button {
+  width: 100px;
+  height: 40px;
+  border-radius: var(--radius-md);
+}
+
+/* Shimmer animation - defined in animations.css but redefined here for specificity */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Grid layouts for multiple skeletons */
+.skeleton-grid {
+  display: grid;
+  gap: var(--spacing-lg);
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Responsive skeleton sizes */
+@media (max-width: 768px) {
+  .skeleton-card {
+    height: 150px;
+  }
+
+  .skeleton-circle {
+    width: 100px;
+    height: 100px;
+  }
+}

@@ -1,0 +1,23 @@
+.stats-container {
+  min-height: 100vh;
+  padding: var(--spacing-2xl) var(--spacing-xl);
+  background-color: var(--bg-primary);
+  transition: background-color var(--transition-base);
+}
+
+.stats-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.stats-header h1 {
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-bold);
+}
+
+.stats-header p {
+  color: var(--text-secondary);
+  font-size: var(--text-lg);
+}

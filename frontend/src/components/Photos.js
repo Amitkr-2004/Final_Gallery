@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import Masonry from 'react-masonry-css';
 import ImagePreview from './ImagePreview';
+import SkeletonLoader from './common/SkeletonLoader';
+import LazyImage from './common/LazyImage';
 import './Photos.css';
 
 function Photos() {
@@ -8,6 +11,22 @@ function Photos() {
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Masonry breakpoint columns
+  const breakpointColumnsObj = {
+    default: 4,
+    1400: 3,
+    1024: 2,
+    768: 1
+  };
+
+  // Memoized sorted photos
+  const sortedPhotos = useMemo(() => {
+    return photos.sort((a, b) =>
+      new Date(b.uploaded_at) - new Date(a.uploaded_at)
+    );
+  }, [photos]);
 
   useEffect(() => {
     fetchPhotos();
@@ -105,10 +124,24 @@ function Photos() {
     }
   };
 
+  const handleImageClick = (imageUrl, index) => {
+    setPreviewImage(imageUrl);
+    setCurrentImageIndex(index);
+  };
+
   if (loading) {
     return (
       <div className="photos-container">
-        <div className="loading">Loading photos...</div>
+        <header className="photos-header">
+          <h1>Photo Gallery</h1>
+        </header>
+        <Masonry
+          breakpointCols={breakpointColumnsObj}
+          className="photos-masonry-grid"
+          columnClassName="photos-masonry-grid-column"
+        >
+          <SkeletonLoader variant="card" count={8} />
+        </Masonry>
       </div>
     );
   }
@@ -129,26 +162,34 @@ function Photos() {
         <p className="photo-count">{photos.length} unique {photos.length === 1 ? 'photo' : 'photos'}</p>
       </header>
       
-      {photos.length === 0 ? (
+      {sortedPhotos.length === 0 ? (
         <div className="no-photos">
           <p>No photos found. Upload some images to get started!</p>
         </div>
       ) : (
-        <div className="photos-grid">
-          {photos.map((photo) => (
+        <Masonry
+          breakpointCols={breakpointColumnsObj}
+          className="photos-masonry-grid"
+          columnClassName="photos-masonry-grid-column"
+        >
+          {sortedPhotos.map((photo, index) => (
             <div key={photo.id} className="photo-card">
-              <div className="photo-image-container">
-                <img
+              <div
+                className="photo-image-container"
+                onClick={() => handleImageClick(photo.image_url, index)}
+              >
+                <LazyImage
                   src={photo.image_url}
-                  alt={`ID ${photo.id}`}
+                  alt={`Photo ${photo.id}`}
                   className="photo-image"
-                  loading="lazy"
-                  onClick={() => setPreviewImage(photo.image_url)}
-                  style={{ cursor: 'pointer' }}
-                  onError={(e) => {
-                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect width="200" height="200" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImage not found%3C/text%3E%3C/svg%3E';
-                  }}
                 />
+                <div className="photo-overlay">
+                  <div className="photo-overlay-info">
+                    <p className="photo-overlay-date">
+                      {new Date(photo.uploaded_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
                 <button
                   className="delete-button"
                   onClick={(e) => {
@@ -158,22 +199,18 @@ function Photos() {
                   disabled={deletingId === photo.id}
                   title="Delete photo"
                 >
-                  {deletingId === photo.id ? 'Deleting...' : '×'}
+                  {deletingId === photo.id ? '...' : '×'}
                 </button>
-              </div>
-              <div className="photo-info">
-                <p className="photo-id">Photo ID: {photo.id}</p>
-                <p className="photo-date">
-                  {new Date(photo.uploaded_at).toLocaleDateString()}
-                </p>
               </div>
             </div>
           ))}
-        </div>
+        </Masonry>
       )}
       {previewImage && (
         <ImagePreview
           imageUrl={previewImage}
+          images={sortedPhotos.map(p => p.image_url)}
+          currentIndex={currentImageIndex}
           onClose={() => setPreviewImage(null)}
         />
       )}

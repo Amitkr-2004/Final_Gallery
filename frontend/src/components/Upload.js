@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Upload as UploadIcon, Folder, Image as ImageIcon, CheckCircle, XCircle, Loader, X } from 'lucide-react';
 import './Upload.css';
 
 function Upload() {
@@ -207,13 +208,13 @@ function Upload() {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'uploading':
-        return '⏳';
+        return <Loader size={14} className="spinner" />;
       case 'success':
-        return '✓';
+        return <CheckCircle size={14} />;
       case 'error':
-        return '✗';
+        return <XCircle size={14} />;
       default:
-        return '';
+        return null;
     }
   };
 
@@ -231,14 +232,16 @@ function Upload() {
             disabled={uploading}
             className="btn-secondary mode-btn"
           >
-            Select Files
+            <ImageIcon size={20} />
+            <span>Select Files</span>
           </button>
           <button
             onClick={() => folderInputRef.current?.click()}
             disabled={uploading}
             className="btn-secondary mode-btn"
           >
-            Select Folder
+            <Folder size={20} />
+            <span>Select Folder</span>
           </button>
         </div>
 
@@ -272,11 +275,7 @@ function Upload() {
 
           {selectedFiles.length === 0 ? (
             <div className="upload-placeholder">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
+              <UploadIcon size={64} strokeWidth={1.5} />
               <p>Drag and drop images or folders here</p>
               <p className="upload-hint">or use the buttons above</p>
               <p className="upload-hint">Supports: JPG, PNG, WEBP</p>
@@ -314,7 +313,7 @@ function Upload() {
                         className="remove-file-btn"
                         title="Remove"
                       >
-                        ×
+                        <X size={16} />
                       </button>
                     )}
                   </div>

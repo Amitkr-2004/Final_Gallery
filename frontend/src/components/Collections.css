@@ -1,12 +1,13 @@
 .collections-container {
   min-height: 100vh;
-  padding: 20px 40px;
-  background-color: #f0f0f0;
+  padding: var(--spacing-2xl) var(--spacing-xl);
+  background-color: var(--bg-primary);
+  transition: background-color var(--transition-base);
 }
 
 .collections-header {
   text-align: right;
-  margin-bottom: 30px;
+  margin-bottom: var(--spacing-2xl);
   max-width: 1400px;
   margin-left: auto;
   margin-right: auto;
@@ -17,9 +18,9 @@
 }
 
 .person-count {
-  color: #5f6368;
-  font-size: 0.875rem;
-  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-normal);
   letter-spacing: 0.25px;
 }
 
@@ -27,36 +28,40 @@
 .error,
 .no-persons {
   text-align: center;
-  padding: 40px;
-  color: #666;
-  font-size: 1.2rem;
+  padding: var(--spacing-2xl);
+  color: var(--text-secondary);
+  font-size: var(--text-xl);
 }
 
 .error {
-  color: #d32f2f;
+  color: var(--accent-error);
 }
 
 .retry-button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  background-color: #1976d2;
-  color: white;
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--accent-primary);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .retry-button:hover {
-  background-color: #1565c0;
+  background-color: var(--accent-primary-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 /* Grid of circular avatars - Google Photos style */
 .persons-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 24px;
+  gap: var(--spacing-lg);
   max-width: 1400px;
   margin: 0 auto;
   padding: 0;
@@ -71,7 +76,7 @@
   margin: 0;
   padding: 0;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
 
 .person-avatar-wrapper:hover {
@@ -79,47 +84,48 @@
 }
 
 /* Circular avatar image - perfect circle with border ring */
-.person-avatar {
+.person-avatar,
+.person-avatar .lazy-image-container {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-  margin: 0;
-  padding: 0;
-  border: 3px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-  transition: all 0.15s ease;
-  background-color: #fff;
+  border-radius: var(--radius-full);
 }
 
-.person-avatar-wrapper:hover .person-avatar {
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
-  border-color: rgba(255, 255, 255, 1);
+.person-avatar .lazy-image {
+  object-fit: cover;
+  border: 3px solid var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  background-color: var(--bg-secondary);
+}
+
+.person-avatar-wrapper:hover .lazy-image {
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  border-color: var(--bg-primary);
 }
 
 /* Circular placeholder when no face image */
 .person-avatar-placeholder {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-size: 2.5rem;
-  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  color: var(--text-inverse);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-bold);
   margin: 0;
   padding: 0;
-  border: 3px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-  transition: all 0.15s ease;
+  border: 3px solid var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
 }
 
 .person-avatar-wrapper:hover .person-avatar-placeholder {
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
-  border-color: rgba(255, 255, 255, 1);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  border-color: var(--bg-primary);
 }
 
 /* Delete button - appears on hover */
@@ -127,25 +133,25 @@
   position: absolute;
   top: 0;
   right: 0;
-  background-color: rgba(211, 47, 47, 0.9);
-  color: white;
-  border: 2px solid white;
-  border-radius: 50%;
+  background-color: var(--accent-error);
+  color: var(--text-inverse);
+  border: 2px solid var(--bg-primary);
+  border-radius: var(--radius-full);
   width: 32px;
   height: 32px;
   font-size: 20px;
-  font-weight: bold;
+  font-weight: var(--font-bold);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
   z-index: 10;
   line-height: 1;
   padding: 0;
   opacity: 0;
   transform: scale(0.8);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .person-avatar-wrapper:hover .delete-avatar-button {
@@ -154,7 +160,7 @@
 }
 
 .delete-avatar-button:hover:not(:disabled) {
-  background-color: rgba(198, 40, 40, 1);
+  background-color: #c62828;
   transform: scale(1.15);
 }
 
@@ -167,7 +173,7 @@
 @media (max-width: 1024px) {
   .persons-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 20px;
+    gap: var(--spacing-lg);
   }
 
   .person-avatar-wrapper {
@@ -176,14 +182,14 @@
   }
 
   .collections-container {
-    padding: 20px 30px;
+    padding: var(--spacing-lg) var(--spacing-xl);
   }
 }
 
 @media (max-width: 768px) {
   .persons-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 16px;
+    gap: var(--spacing-md);
   }
 
   .person-avatar-wrapper {
@@ -193,16 +199,16 @@
   }
 
   .collections-container {
-    padding: 15px 20px;
+    padding: var(--spacing-md) var(--spacing-lg);
   }
 
-  .person-avatar,
+  .person-avatar .lazy-image,
   .person-avatar-placeholder {
     border-width: 2px;
   }
 
   .person-avatar-placeholder {
-    font-size: 2rem;
+    font-size: var(--text-3xl);
     margin: 0;
     padding: 0;
   }
@@ -217,7 +223,7 @@
 @media (max-width: 480px) {
   .persons-grid {
     grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
-    gap: 12px;
+    gap: var(--spacing-sm);
   }
 
   .person-avatar-wrapper {
@@ -227,16 +233,16 @@
   }
 
   .collections-container {
-    padding: 10px 15px;
+    padding: var(--spacing-md);
   }
 
-  .person-avatar,
+  .person-avatar .lazy-image,
   .person-avatar-placeholder {
     border-width: 2px;
   }
 
   .person-avatar-placeholder {
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
     margin: 0;
     padding: 0;
   }

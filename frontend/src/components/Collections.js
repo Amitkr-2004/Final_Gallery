@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SkeletonLoader from './common/SkeletonLoader';
+import LazyImage from './common/LazyImage';
 import './Collections.css';
 
 function Collections() {
@@ -111,7 +113,12 @@ function Collections() {
   if (loading) {
     return (
       <div className="collections-container">
-        <div className="loading">Loading collections...</div>
+        <header className="collections-header">
+          <h1>Collections</h1>
+        </header>
+        <div className="persons-grid">
+          <SkeletonLoader variant="circle" count={8} />
+        </div>
       </div>
     );
   }
@@ -154,24 +161,16 @@ function Collections() {
               </button>
 
               {person.face_image_url ? (
-                <img
+                <LazyImage
                   src={person.face_image_url}
                   alt={`Person ${person.person_number}`}
                   className="person-avatar"
-                  onError={(e) => {
-                    // Fallback if image fails to load
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
                 />
               ) : (
                 <div className="person-avatar-placeholder">
                   {person.person_number}
                 </div>
               )}
-              <div className="person-avatar-placeholder" style={{display: 'none'}}>
-                {person.person_number}
-              </div>
             </div>
           ))}
         </div>
