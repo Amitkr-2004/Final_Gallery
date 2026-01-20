@@ -1,0 +1,249 @@
+.collections-container {
+  min-height: 100vh;
+  padding: 20px 40px;
+  background-color: #f0f0f0;
+}
+
+.collections-header {
+  text-align: right;
+  margin-bottom: 30px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.collections-header h1 {
+  display: none;
+}
+
+.person-count {
+  color: #5f6368;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.25px;
+}
+
+.loading,
+.error,
+.no-persons {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.error {
+  color: #d32f2f;
+}
+
+.retry-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+.retry-button:hover {
+  background-color: #1565c0;
+}
+
+/* Grid of circular avatars - Google Photos style */
+.persons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+  justify-items: center;
+}
+
+/* Avatar wrapper - circular container with border ring */
+.person-avatar-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.person-avatar-wrapper:hover {
+  transform: scale(1.08);
+}
+
+/* Circular avatar image - perfect circle with border ring */
+.person-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  transition: all 0.15s ease;
+  background-color: #fff;
+}
+
+.person-avatar-wrapper:hover .person-avatar {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+/* Circular placeholder when no face image */
+.person-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  padding: 0;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  transition: all 0.15s ease;
+}
+
+.person-avatar-wrapper:hover .person-avatar-placeholder {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+/* Delete button - appears on hover */
+.delete-avatar-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: rgba(211, 47, 47, 0.9);
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  z-index: 10;
+  line-height: 1;
+  padding: 0;
+  opacity: 0;
+  transform: scale(0.8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.person-avatar-wrapper:hover .delete-avatar-button {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.delete-avatar-button:hover:not(:disabled) {
+  background-color: rgba(198, 40, 40, 1);
+  transform: scale(1.15);
+}
+
+.delete-avatar-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive design - maintain layout */
+@media (max-width: 1024px) {
+  .persons-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 20px;
+  }
+
+  .person-avatar-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+
+  .collections-container {
+    padding: 20px 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .persons-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 16px;
+  }
+
+  .person-avatar-wrapper {
+    width: 100px;
+    height: 100px;
+    padding: 0;
+  }
+
+  .collections-container {
+    padding: 15px 20px;
+  }
+
+  .person-avatar,
+  .person-avatar-placeholder {
+    border-width: 2px;
+  }
+
+  .person-avatar-placeholder {
+    font-size: 2rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  .delete-avatar-button {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .persons-grid {
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+    gap: 12px;
+  }
+
+  .person-avatar-wrapper {
+    width: 85px;
+    height: 85px;
+    padding: 0;
+  }
+
+  .collections-container {
+    padding: 10px 15px;
+  }
+
+  .person-avatar,
+  .person-avatar-placeholder {
+    border-width: 2px;
+  }
+
+  .person-avatar-placeholder {
+    font-size: 1.5rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  .delete-avatar-button {
+    width: 24px;
+    height: 24px;
+    font-size: 16px;
+  }
+}
