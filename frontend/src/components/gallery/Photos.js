@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import Masonry from 'react-masonry-css';
 import ImagePreview from './ImagePreview';
-import SkeletonLoader from './common/SkeletonLoader';
-import LazyImage from './common/LazyImage';
+import SkeletonLoader from '../common/SkeletonLoader';
+import LazyImage from '../common/LazyImage';
 import './Photos.css';
 
 function Photos() {

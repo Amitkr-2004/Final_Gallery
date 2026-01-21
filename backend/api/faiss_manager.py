@@ -36,15 +36,25 @@ class FAISSManager:
     
     def _initialize_index(self):
         """Initialize or load FAISS index."""
-        if os.path.exists(self.index_path) and os.path.exists(self.id_map_path):
-            # Load existing index
-            self.index = faiss.read_index(self.index_path)
-            self.id_map = np.load(self.id_map_path, allow_pickle=True).item()
-            # Get dimension from index
-            self.dimension = self.index.d
-        else:
-            # Create new index - dimension will be set when first embedding is added
+        try:
+            if os.path.exists(self.index_path) and os.path.exists(self.id_map_path):
+                # Load existing index
+                self.index = faiss.read_index(self.index_path)
+                self.id_map = np.load(self.id_map_path, allow_pickle=True).item()
+                # Get dimension from index
+                self.dimension = self.index.d
+            else:
+                # Create new index - dimension will be set when first embedding is added
+                self.dimension = None
+                self.index = None
+                self.id_map = {}
+        except Exception as e:
+            # If loading fails, start fresh
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to load FAISS index, starting fresh: {str(e)}")
             self.dimension = None
+            self.index = None
             self.id_map = {}
     
     def _create_index(self, dimension):
@@ -185,24 +195,41 @@ class FAISSManager:
     def rebuild_index(self):
         """Rebuild FAISS index from all Person records in database."""
         persons = Person.objects.all()
-        
+
         if not persons.exists():
+            # Database is empty - reset index
             self.index = None
             self.id_map = {}
+            self.dimension = None
+            # Clean up any orphaned index files
+            try:
+                if os.path.exists(self.index_path):
+                    os.remove(self.index_path)
+                if os.path.exists(self.id_map_path):
+                    os.remove(self.id_map_path)
+            except Exception:
+                pass
             return
-        
+
         # Get dimension from first person
         first_embedding = np.array(persons.first().embedding_vector, dtype=np.float32)
         dimension = len(first_embedding)
-        
+
         # Create new index
         self._create_index(dimension)
         self.id_map = {}
-        
+
         # Add all persons to index
         for person in persons:
             embedding = np.array(person.embedding_vector, dtype=np.float32)
-            self.add_embedding(person.id, embedding)
+            # Normalize and add manually to avoid nested save calls
+            normalized = self._normalize_vector(embedding).reshape(1, -1)
+            self.index.add(normalized)
+            faiss_id = self.index.ntotal - 1
+            self.id_map[faiss_id] = person.id
+
+        # Save the rebuilt index
+        self._save_index()
     
     def remove_embedding(self, person_id):
         """
@@ -257,10 +284,10 @@ _faiss_manager = None
 def get_faiss_manager(similarity_threshold=0.7):
     """
     Get or create global FAISS manager instance.
-    
+
     Args:
         similarity_threshold: Minimum cosine similarity to match a person
-        
+
     Returns:
         FAISSManager instance
     """
@@ -268,6 +295,13 @@ def get_faiss_manager(similarity_threshold=0.7):
     if _faiss_manager is None:
         _faiss_manager = FAISSManager(similarity_threshold=similarity_threshold)
         # Rebuild index from database if it doesn't exist
-        if _faiss_manager.index is None or _faiss_manager.index.ntotal == 0:
-            _faiss_manager.rebuild_index()
+        # This handles both empty database (after clearing) and missing index files
+        if _faiss_manager.index is None:
+            try:
+                _faiss_manager.rebuild_index()
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to rebuild FAISS index on initialization: {str(e)}")
+                # Continue anyway - index will be created on first upload
     return _faiss_manager

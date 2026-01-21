@@ -3,21 +3,26 @@
 :root {
   /* Light Theme Colors */
   --bg-primary: #ffffff;
-  --bg-secondary: #f5f7fa;
-  --bg-tertiary: #e8ecf1;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
   --bg-hover: #f0f4f8;
+  --bg-gradient: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%);
 
   --text-primary: #1a202c;
   --text-secondary: #4a5568;
   --text-tertiary: #718096;
   --text-inverse: #ffffff;
 
-  --accent-primary: #6366f1;
-  --accent-primary-hover: #4f46e5;
-  --accent-secondary: #8b5cf6;
+  --accent-primary: #10b981;
+  --accent-primary-hover: #059669;
+  --accent-secondary: #3b82f6;
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
+
+  /* Card Styles */
+  --card-bg: #ffffff;
+  --card-hover-bg: #fafafa;
 
   --border-color: #e2e8f0;
   --border-hover: #cbd5e0;
@@ -66,18 +71,22 @@
   --bg-secondary: #2a2a2a;
   --bg-tertiary: #3a3a3a;
   --bg-hover: #333333;
+  --bg-gradient: linear-gradient(135deg, #1a2e1a 0%, #1a2a2e 100%);
 
   --text-primary: #f5f5f5;
   --text-secondary: #d1d5db;
   --text-tertiary: #9ca3af;
   --text-inverse: #1a1a1a;
 
-  --accent-primary: #818cf8;
-  --accent-primary-hover: #6366f1;
-  --accent-secondary: #a78bfa;
+  --accent-primary: #34d399;
+  --accent-primary-hover: #10b981;
+  --accent-secondary: #60a5fa;
   --accent-success: #34d399;
   --accent-warning: #fbbf24;
   --accent-error: #f87171;
+
+  --card-bg: #2a2a2a;
+  --card-hover-bg: #333333;
 
   --border-color: #404040;
   --border-hover: #525252;

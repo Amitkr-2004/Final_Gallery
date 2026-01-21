@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import SkeletonLoader from './common/SkeletonLoader';
-import LazyImage from './common/LazyImage';
+import { useNavigate, useParams } from 'react-router-dom';
+import SkeletonLoader from '../common/SkeletonLoader';
+import LazyImage from '../common/LazyImage';
 import './Collections.css';
 
 function Collections() {
   const navigate = useNavigate();
+  const { eventId } = useParams();
   const [persons, setPersons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -149,7 +150,7 @@ function Collections() {
             <div
               key={person.id}
               className="person-avatar-wrapper"
-              onClick={() => navigate(`/persons/${person.id}/photos`)}
+              onClick={() => navigate(`/events/${eventId}/gallery/persons/${person.id}/photos`)}
             >
               <button
                 className="delete-avatar-button"

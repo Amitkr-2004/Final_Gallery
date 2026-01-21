@@ -7,12 +7,15 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { ThemeProvider } from './context/ThemeContext';
+import { EventProvider } from './context/EventContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <ThemeProvider>
-      <App />
+      <EventProvider>
+        <App />
+      </EventProvider>
     </ThemeProvider>
   </React.StrictMode>
 );

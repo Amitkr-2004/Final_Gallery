@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Image, Users, TrendingUp, Calendar, RefreshCw } from 'lucide-react';
-import { calculateStats, getLast7DaysChartData } from '../utils/statsCalculations';
+import { calculateStats, getLast7DaysChartData } from '../../utils/statsCalculations';
 import './Stats.css';
 
 function Stats() {

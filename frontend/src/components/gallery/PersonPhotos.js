@@ -4,7 +4,7 @@ import ImagePreview from './ImagePreview';
 import './PersonPhotos.css';
 
 function PersonPhotos() {
-  const { personId } = useParams();
+  const { personId, eventId } = useParams();
   const navigate = useNavigate();
   const [photos, setPhotos] = useState([]);
   const [person, setPerson] = useState(null);
@@ -98,7 +98,7 @@ function PersonPhotos() {
     return (
       <div className="person-photos-container">
         <div className="error">Error: {error}</div>
-        <button onClick={() => navigate('/collections')} className="back-button">
+        <button onClick={() => navigate(`/events/${eventId}/gallery/collections`)} className="back-button">
           Back to Collections
         </button>
       </div>
@@ -108,7 +108,7 @@ function PersonPhotos() {
   return (
     <div className="person-photos-container">
       <header className="person-photos-header">
-        <button onClick={() => navigate('/collections')} className="back-button">
+        <button onClick={() => navigate(`/events/${eventId}/gallery/collections`)} className="back-button">
           ← Back to Collections
         </button>
         <div className="header-info">

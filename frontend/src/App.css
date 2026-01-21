@@ -4,4 +4,31 @@
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color var(--transition-base), color var(--transition-base);
+  display: flex;
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  margin-left: 260px;
+  min-height: 100vh;
+  background-color: var(--bg-secondary);
+  transition: margin-left var(--transition-base);
+}
+
+/* When sidebar is collapsed */
+.sidebar.collapsed ~ .main-content {
+  margin-left: 80px;
+}
+
+/* Mobile Layout */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding-top: var(--spacing-lg);
+  }
+
+  .sidebar.collapsed ~ .main-content {
+    margin-left: 0;
+  }
 }

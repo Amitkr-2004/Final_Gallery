@@ -1,0 +1,85 @@
+/* Summary Card Styles */
+
+.summary-card {
+  border-left: 4px solid var(--accent-primary);
+  transition: all var(--transition-base);
+}
+
+.summary-card-primary {
+  border-left-color: var(--accent-primary);
+}
+
+.summary-card-secondary {
+  border-left-color: var(--accent-secondary);
+}
+
+.summary-card-success {
+  border-left-color: var(--accent-success);
+}
+
+.summary-card-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.summary-card-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.summary-icon-primary {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.summary-icon-secondary {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.summary-icon-success {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.summary-card-icon {
+  color: var(--accent-primary);
+}
+
+.summary-icon-secondary .summary-card-icon {
+  color: var(--accent-secondary);
+}
+
+.summary-icon-success .summary-card-icon {
+  color: var(--accent-success);
+}
+
+.summary-card-info {
+  flex: 1;
+}
+
+.summary-card-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0 0 var(--spacing-xs) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-card-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1;
+}
+
+/* Hover Effect */
+.summary-card:hover .summary-card-icon-wrapper {
+  transform: scale(1.1);
+  transition: transform var(--transition-fast);
+}

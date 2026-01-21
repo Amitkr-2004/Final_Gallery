@@ -1,10 +1,15 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Photos from './components/Photos';
-import Collections from './components/Collections';
-import PersonPhotos from './components/PersonPhotos';
-import Upload from './components/Upload';
-import Stats from './components/Stats';
-import Navigation from './components/layout/Navigation';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Dashboard from './components/dashboard/Dashboard';
+import CreateEvent from './components/events/CreateEvent';
+import EventsList from './components/events/EventsList';
+import EventGallery from './components/gallery/EventGallery';
+import Photos from './components/gallery/Photos';
+import Collections from './components/gallery/Collections';
+import PersonPhotos from './components/gallery/PersonPhotos';
+import Upload from './components/gallery/Upload';
+import Stats from './components/gallery/Stats';
+import PlaceholderPage from './components/common/PlaceholderPage';
+import Sidebar from './components/layout/Sidebar';
 import { useTheme } from './hooks/useTheme';
 import './App.css';
 
@@ -14,14 +19,37 @@ function App() {
   return (
     <Router>
       <div className="App" data-theme={theme}>
-        <Navigation />
-        <Routes>
-          <Route path="/" element={<Photos />} />
-          <Route path="/collections" element={<Collections />} />
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="/persons/:personId/photos" element={<PersonPhotos />} />
-        </Routes>
+        <Sidebar />
+        <main className="main-content">
+          <Routes>
+            {/* Dashboard */}
+            <Route path="/" element={<Dashboard />} />
+
+            {/* Event Management */}
+            <Route path="/create-event" element={<CreateEvent />} />
+            <Route path="/events" element={<EventsList />} />
+
+            {/* Event Gallery */}
+            <Route path="/events/:eventId/gallery" element={<EventGallery />}>
+              <Route index element={<Navigate to="upload" replace />} />
+              <Route path="upload" element={<Upload />} />
+              <Route path="photos" element={<Photos />} />
+              <Route path="collections" element={<Collections />} />
+              <Route path="stats" element={<Stats />} />
+              <Route path="persons/:personId/photos" element={<PersonPhotos />} />
+            </Route>
+
+            {/* Placeholder Routes */}
+            <Route
+              path="/analytics"
+              element={<PlaceholderPage title="Analytics" description="Advanced analytics and insights coming soon!" />}
+            />
+            <Route
+              path="/settings"
+              element={<PlaceholderPage title="Settings" description="Customize your experience in the settings panel (coming soon)." />}
+            />
+          </Routes>
+        </main>
       </div>
     </Router>
   );
