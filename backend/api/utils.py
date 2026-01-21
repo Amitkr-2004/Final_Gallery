@@ -102,3 +102,66 @@ def detect_faces_from_file(image_file, min_confidence=0.5):
     finally:
         if os.path.exists(tmp_file_path):
             os.unlink(tmp_file_path)
+
+
+def update_daily_statistics(photos_count=1, faces_count=0):
+    """
+    Update daily statistics for photo uploads and face detections.
+
+    This function should be called for EVERY successfully uploaded image.
+    It increments the daily counter, creating a new record if needed.
+
+    Args:
+        photos_count: Number of photos uploaded (default: 1)
+        faces_count: Number of faces detected (default: 0)
+
+    Returns:
+        DailyStatistics object
+
+    Note:
+        - Uses get_or_create to handle concurrent requests safely
+        - One record per date (YYYY-MM-DD)
+        - If date exists: increments counters
+        - If not: creates new record with initial counts
+    """
+    from datetime import date
+    from django.db import transaction
+    from django.db.models import F
+    from .models import DailyStatistics
+    import logging
+
+    logger = logging.getLogger(__name__)
+    today = date.today()
+
+    try:
+        with transaction.atomic():
+            # Use get_or_create to safely handle concurrent requests
+            stats, created = DailyStatistics.objects.get_or_create(
+                date=today,
+                defaults={
+                    'photos_uploaded': photos_count,
+                    'faces_detected': faces_count
+                }
+            )
+
+            if not created:
+                # Record exists, increment the counters atomically
+                # Using F() expressions to avoid race conditions
+                stats.photos_uploaded = F('photos_uploaded') + photos_count
+                stats.faces_detected = F('faces_detected') + faces_count
+                stats.save(update_fields=['photos_uploaded', 'faces_detected', 'updated_at'])
+
+                # Refresh from database to get actual values (F() expressions need refresh)
+                stats.refresh_from_db()
+
+            logger.info(
+                f"[STATISTICS] Updated stats for {today}: "
+                f"+{photos_count} photos, +{faces_count} faces. "
+                f"Total today: {stats.photos_uploaded} photos, {stats.faces_detected} faces"
+            )
+
+            return stats
+
+    except Exception as e:
+        logger.error(f"[STATISTICS] Failed to update statistics: {str(e)}")
+        raise

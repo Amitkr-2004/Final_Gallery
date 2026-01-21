@@ -86,7 +86,7 @@ class Person(models.Model):
 class PersonPhoto(models.Model):
     """
     Model to link persons with photos (many-to-many relationship).
-    
+
     Architecture Rules:
     - One photo can belong to many persons (many-to-many via this mapping table)
     - One person can have many photos (many-to-many via this mapping table)
@@ -110,3 +110,32 @@ class PersonPhoto(models.Model):
 
     def __str__(self):
         return f"Person {self.person.person_number} - Photo {self.photo.id}"
+
+
+class DailyStatistics(models.Model):
+    """
+    Model to track daily upload statistics.
+
+    Stores aggregated statistics per day for:
+    - Total photos uploaded
+    - Total faces detected
+
+    One record per day (unique date constraint).
+    """
+    id = models.AutoField(primary_key=True)
+    date = models.DateField(unique=True, db_index=True, help_text="Date in YYYY-MM-DD format")
+    photos_uploaded = models.IntegerField(default=0, help_text="Total photos uploaded on this date")
+    faces_detected = models.IntegerField(default=0, help_text="Total faces detected on this date")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = 'Daily Statistics'
+        verbose_name_plural = 'Daily Statistics'
+        constraints = [
+            models.UniqueConstraint(fields=['date'], name='unique_date')
+        ]
+
+    def __str__(self):
+        return f"Stats for {self.date}: {self.photos_uploaded} photos, {self.faces_detected} faces"

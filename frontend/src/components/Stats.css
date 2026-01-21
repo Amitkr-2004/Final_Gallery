@@ -6,18 +6,312 @@
 }
 
 .stats-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: var(--spacing-2xl);
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .stats-header h1 {
   color: var(--text-primary);
-  margin-bottom: var(--spacing-sm);
+  margin: 0;
   font-size: var(--text-4xl);
   font-weight: var(--font-bold);
 }
 
-.stats-header p {
-  color: var(--text-secondary);
+.refresh-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--accent-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.refresh-button:hover:not(:disabled) {
+  background-color: var(--accent-primary-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.refresh-button.refreshing svg {
+  animation: spin 1s linear infinite;
+}
+
+/* Loading & Error States */
+.stats-loading,
+.stats-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  min-height: 400px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--accent-primary);
+  border-radius: var(--radius-full);
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--spacing-md);
+}
+
+.stats-error p {
+  color: var(--accent-error);
   font-size: var(--text-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Stat Cards Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-2xl);
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.stat-card {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  animation: fadeInUp var(--transition-base);
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+}
+
+.stat-icon-primary {
+  background-color: rgba(99, 102, 241, 0.1);
+  color: var(--accent-primary);
+}
+
+.stat-icon-secondary {
+  background-color: rgba(139, 92, 246, 0.1);
+  color: var(--accent-secondary);
+}
+
+.stat-icon-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--accent-success);
+}
+
+.stat-icon-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--accent-warning);
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.stat-detail {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* Chart Section */
+.chart-section {
+  max-width: 1400px;
+  margin: 0 auto var(--spacing-2xl) auto;
+  padding: var(--spacing-xl);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-title {
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.chart-container {
+  margin-top: var(--spacing-lg);
+}
+
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+}
+
+/* Stats Table */
+.stats-table-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.table-title {
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.stats-table-wrapper {
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.stats-table thead {
+  background-color: var(--bg-tertiary);
+}
+
+.stats-table th {
+  padding: var(--spacing-md);
+  text-align: left;
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.stats-table td {
+  padding: var(--spacing-md);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stats-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+.stats-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .stats-container {
+    padding: var(--spacing-md);
+  }
+
+  .stats-header {
+    flex-direction: column;
+    gap: var(--spacing-md);
+    align-items: flex-start;
+  }
+
+  .stats-header h1 {
+    font-size: var(--text-3xl);
+  }
+
+  .refresh-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .stat-card {
+    padding: var(--spacing-md);
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .stat-value {
+    font-size: var(--text-2xl);
+  }
+
+  .chart-section,
+  .stats-table-section {
+    padding: var(--spacing-md);
+  }
+
+  .chart-title,
+  .table-title {
+    font-size: var(--text-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-header h1 {
+    font-size: var(--text-2xl);
+  }
+
+  .stat-value {
+    font-size: var(--text-xl);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

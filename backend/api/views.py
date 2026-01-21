@@ -6,9 +6,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import Photo, Person, PersonPhoto
-from .serializers import ImageUploadSerializer, PhotoSerializer, PersonSerializer
-from .utils import get_image_upload_path, detect_faces_from_file, detect_faces_and_extract_embeddings
+from .models import Photo, Person, PersonPhoto, DailyStatistics
+from .serializers import ImageUploadSerializer, PhotoSerializer, PersonSerializer, DailyStatisticsSerializer
+from .utils import get_image_upload_path, detect_faces_from_file, detect_faces_and_extract_embeddings, update_daily_statistics
 from .faiss_manager import get_faiss_manager
 import numpy as np
 
@@ -65,14 +65,17 @@ def upload_image(request):
         
         if existing_photo:
             # Photo already exists, detect faces from existing image
+            # NOTE: Do NOT update statistics for duplicate photos
+            # They were already counted when first uploaded
+
             # Get full path to existing image
             existing_image_path = os.path.join(settings.MEDIA_ROOT, existing_photo.file_path)
-            
+
             # Detect faces and extract embeddings from existing image (only clear faces)
             # Filter by detection confidence to avoid processing unclear/blurry faces
             face_confidence_threshold = getattr(settings, 'FACE_DETECTION_CONFIDENCE_THRESHOLD', 0.5)
             quality_faces = detect_faces_and_extract_embeddings(existing_image_path, min_confidence=face_confidence_threshold)
-            
+
             # Process each clearly detected face embedding with FAISS similarity matching
             # Logic: Upload Image → Detect Face(s) clearly → Compare with existing persons →
             #        • Match found → Append image to matched person's collection
@@ -81,14 +84,14 @@ def upload_image(request):
             similarity_threshold = getattr(settings, 'FAISS_SIMILARITY_THRESHOLD', 0.7)
             faiss_manager = get_faiss_manager(similarity_threshold=similarity_threshold)
             matched_persons = []
-            
+
             for embedding, confidence in quality_faces:
                 # Step 1: Compare with existing persons using FAISS
                 # find_or_create_person() checks if person already exists:
                 #   - If similarity >= threshold → returns existing person (is_new=False)
                 #   - If no match found → creates new person (is_new=True)
                 person, is_new = faiss_manager.find_or_create_person(embedding)
-                
+
                 # Step 2: Add image to person's collection (create PersonPhoto mapping)
                 # Whether person is existing or new, append this image to their collection
                 # get_or_create ensures UNIQUE(person, photo) - no duplicate mappings
@@ -103,17 +106,17 @@ def upload_image(request):
                         person=person,
                         photo=existing_photo
                     )
-                
+
                 matched_persons.append({
                     'person_id': person.id,
                     'person_number': person.person_number,
                     'is_new': is_new,  # True if new person/collection created, False if existing
                     'detection_confidence': confidence  # Quality score of face detection
                 })
-            
+
             return Response({
                 'photo_id': existing_photo.id,
-                'message': 'Photo already exists',
+                'message': 'Photo already exists (duplicate not counted in statistics)',
                 'file_path': existing_photo.file_path,
                 'faces_detected': len(quality_faces),
                 'faces_processed': len(matched_persons),
@@ -190,7 +193,21 @@ def upload_image(request):
                 'is_new': is_new,  # True if new person/collection created, False if existing
                 'detection_confidence': confidence  # Quality score of face detection
             })
-        
+
+        # UPDATE STATISTICS: New photo successfully uploaded
+        # This is called ONLY for new photos (not duplicates)
+        # Increments daily counter by 1 photo and N faces
+        try:
+            update_daily_statistics(
+                photos_count=1,
+                faces_count=len(matched_persons)  # Use matched_persons count (processed faces)
+            )
+        except Exception as stats_error:
+            # Log error but don't fail the upload
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[STATISTICS] Failed to update statistics: {str(stats_error)}")
+
         return Response({
             'photo_id': photo.id,
             'message': 'Photo uploaded successfully',
@@ -238,10 +255,10 @@ def list_persons(request):
 def get_person_photos(request, person_id):
     """
     Get all photos linked to a specific person.
-    
+
     Args:
         person_id: ID of the person
-        
+
     Returns:
         List of photos linked to the person
     """
@@ -252,10 +269,39 @@ def get_person_photos(request, person_id):
             {'error': 'Person not found'},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     # Get photos through PersonPhoto relationship
     person_photos = PersonPhoto.objects.filter(person=person).select_related('photo')
     photos = [pp.photo for pp in person_photos]
-    
+
     serializer = PhotoSerializer(photos, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def get_statistics(request):
+    """
+    Get daily statistics for photo uploads.
+
+    Query Parameters:
+        days (optional): Number of recent days to fetch (default: 30, max: 365)
+
+    Returns:
+        List of daily statistics ordered by date (most recent first)
+    """
+    try:
+        # Get number of days from query params (default: 30, max: 365)
+        days = int(request.GET.get('days', 30))
+        days = min(max(days, 1), 365)  # Clamp between 1 and 365
+
+        # Fetch statistics for last N days
+        statistics = DailyStatistics.objects.all().order_by('-date')[:days]
+
+        serializer = DailyStatisticsSerializer(statistics, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {'error': 'Failed to fetch statistics', 'details': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

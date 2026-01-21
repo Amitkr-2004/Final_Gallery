@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload as UploadIcon, Folder, Image as ImageIcon, CheckCircle, XCircle, Loader, X } from 'lucide-react';
+import { Upload as UploadIcon, Folder, Image as ImageIcon, CheckCircle, XCircle, Loader, X, BarChart3 } from 'lucide-react';
 import './Upload.css';
 
 function Upload() {
@@ -9,6 +9,8 @@ function Upload() {
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [error, setError] = useState(null);
+  const [refreshingStats, setRefreshingStats] = useState(false);
+  const [statsRefreshed, setStatsRefreshed] = useState(false);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
 
@@ -181,10 +183,39 @@ function Upload() {
     }
   };
 
+  // Auto-refresh statistics after successful upload
+  useEffect(() => {
+    const refreshStatistics = async () => {
+      if (uploadResult && uploadResult.success > 0) {
+        setRefreshingStats(true);
+        setStatsRefreshed(false);
+
+        try {
+          // Fetch statistics with cache-busting parameter
+          const timestamp = new Date().getTime();
+          await fetch(`/api/statistics/?days=30&_t=${timestamp}`);
+
+          // Small delay to ensure backend has processed all updates
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          setStatsRefreshed(true);
+        } catch (err) {
+          console.error('Failed to refresh statistics:', err);
+        } finally {
+          setRefreshingStats(false);
+        }
+      }
+    };
+
+    refreshStatistics();
+  }, [uploadResult]);
+
   const handleReset = () => {
     setSelectedFiles([]);
     setError(null);
     setUploadResult(null);
+    setRefreshingStats(false);
+    setStatsRefreshed(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (folderInputRef.current) folderInputRef.current.value = '';
   };
@@ -400,6 +431,32 @@ function Upload() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Statistics Refresh Indicator */}
+              {uploadResult.success > 0 && (
+                <div className="stats-refresh-section">
+                  {refreshingStats && (
+                    <div className="stats-refreshing">
+                      <Loader size={16} className="spinner" />
+                      <span>Updating statistics...</span>
+                    </div>
+                  )}
+                  {statsRefreshed && !refreshingStats && (
+                    <div className="stats-refreshed">
+                      <CheckCircle size={16} />
+                      <span>Statistics updated! View your updated stats on the dashboard.</span>
+                      <button
+                        onClick={() => navigate('/stats')}
+                        className="btn-link stats-link"
+                        title="View Statistics"
+                      >
+                        <BarChart3 size={16} />
+                        View Stats
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

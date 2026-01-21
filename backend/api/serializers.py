@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Photo, Person
+from .models import Photo, Person, DailyStatistics
 from django.conf import settings
 
 
@@ -42,3 +42,12 @@ class PersonSerializer(serializers.ModelSerializer):
         if first_person_photo and first_person_photo.photo:
             return f"{settings.MEDIA_URL}{first_person_photo.photo.file_path}"
         return None
+
+
+class DailyStatisticsSerializer(serializers.ModelSerializer):
+    """Serializer for DailyStatistics model."""
+
+    class Meta:
+        model = DailyStatistics
+        fields = ['id', 'date', 'photos_uploaded', 'faces_detected', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']

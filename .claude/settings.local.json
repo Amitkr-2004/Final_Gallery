@@ -6,7 +6,8 @@
       "Bash(python manage.py runserver:*)",
       "Bash(curl:*)",
       "Bash(venv/Scripts/python.exe manage.py:*)",
-      "Bash(venv/Scripts/python.exe:*)"
+      "Bash(venv/Scripts/python.exe:*)",
+      "Bash(venv/Scripts/python manage.py:*)"
     ]
   }
 }

@@ -10,4 +10,5 @@ urlpatterns = [
     path('persons/', views.list_persons, name='list-persons'),
     path('persons/<int:person_id>/', delete_person, name='delete-person'),
     path('persons/<int:person_id>/photos/', views.get_person_photos, name='person-photos'),
+    path('statistics/', views.get_statistics, name='statistics'),
 ]
