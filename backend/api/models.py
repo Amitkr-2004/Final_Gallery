@@ -6,15 +6,18 @@ from django.utils import timezone
 class Photo(models.Model):
     """
     Model to store photo information.
-    
+
     Architecture Rules:
     - Each image is stored only ONCE using image_hash (unique constraint)
     - No duplicate photos allowed (enforced by image_hash uniqueness)
     - One photo can belong to many persons (via PersonPhoto mapping)
+    - Photos are associated with events via event_id (event-specific galleries)
     """
     id = models.AutoField(primary_key=True)
     file_path = models.CharField(max_length=500)
     image_hash = models.CharField(max_length=64, unique=True, db_index=True)
+    event_id = models.CharField(max_length=100, null=True, blank=True, db_index=True,
+                                help_text="Event ID from frontend (e.g., 'evt_1234567890')")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

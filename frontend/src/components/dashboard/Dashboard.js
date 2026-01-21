@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderOpen, Image, Users } from 'lucide-react';
 import { useEvents } from '../../hooks/useEvents';
@@ -8,7 +8,10 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { events } = useEvents();
+  const { events, getEventPhotoCount } = useEvents();
+  const [totalPersons, setTotalPersons] = useState(0);
+  const [totalPhotos, setTotalPhotos] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const getCurrentGreeting = () => {
     const hour = new Date().getHours();
@@ -22,9 +25,40 @@ const Dashboard = () => {
     return new Date().toLocaleDateString('en-US', options);
   };
 
-  // Calculate total images across all events (placeholder for now)
-  const totalImages = events.reduce((sum, event) => sum + (event.imageCount || 0), 0);
-  const totalPersons = 0; // Placeholder
+  // Fetch real statistics from backend
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch persons count
+        const personsResponse = await fetch('/api/persons/');
+        if (personsResponse.ok) {
+          const personsData = await personsResponse.json();
+          setTotalPersons(personsData.length);
+        }
+
+        // Fetch photos count
+        const photosResponse = await fetch('/api/photos/');
+        if (photosResponse.ok) {
+          const photosData = await photosResponse.json();
+          setTotalPhotos(photosData.length);
+        }
+      } catch (err) {
+        console.error('Error fetching statistics:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStatistics();
+  }, []);
+
+  // Calculate total images from events (frontend storage)
+  const totalImagesFromEvents = events.reduce((sum, event) => sum + (event.imageCount || 0), 0);
+
+  // Use backend photo count if available, otherwise fall back to event counts
+  const totalImages = totalPhotos > 0 ? totalPhotos : totalImagesFromEvents;
 
   return (
     <div className="dashboard-container">
@@ -46,18 +80,21 @@ const Dashboard = () => {
           title="Total Events"
           value={events.length}
           color="primary"
+          loading={false}
         />
         <SummaryCard
           icon={Image}
           title="Total Images"
           value={totalImages}
           color="secondary"
+          loading={loading}
         />
         <SummaryCard
           icon={Users}
-          title="Total Persons"
+          title="Total Collections"
           value={totalPersons}
           color="success"
+          loading={loading}
         />
       </div>
 
@@ -111,6 +148,9 @@ const Dashboard = () => {
                   <h3 className="recent-event-name">{event.name}</h3>
                   <p className="recent-event-meta">
                     {event.type} • {new Date(event.date).toLocaleDateString()}
+                  </p>
+                  <p className="recent-event-images">
+                    {getEventPhotoCount(event.id)} {getEventPhotoCount(event.id) === 1 ? 'image' : 'images'}
                   </p>
                 </div>
               </div>

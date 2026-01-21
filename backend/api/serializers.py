@@ -11,10 +11,10 @@ class ImageUploadSerializer(serializers.Serializer):
 class PhotoSerializer(serializers.ModelSerializer):
     """Serializer for Photo model."""
     image_url = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Photo
-        fields = ['id', 'file_path', 'image_hash', 'uploaded_at', 'image_url']
+        fields = ['id', 'file_path', 'image_hash', 'event_id', 'uploaded_at', 'image_url']
         read_only_fields = ['id', 'image_hash', 'uploaded_at']
     
     def get_image_url(self, obj):

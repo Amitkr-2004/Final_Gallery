@@ -78,6 +78,26 @@
   line-height: 1;
 }
 
+.summary-card-loading {
+  display: flex;
+  align-items: center;
+  height: 2rem;
+}
+
+.summary-card-loading .spinner {
+  color: var(--accent-primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Hover Effect */
 .summary-card:hover .summary-card-icon-wrapper {
   transform: scale(1.1);

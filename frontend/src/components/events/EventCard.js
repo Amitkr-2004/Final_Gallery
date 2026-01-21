@@ -1,12 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Tag, Image, Trash2 } from 'lucide-react';
+import { useEvents } from '../../hooks/useEvents';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import './EventCard.css';
 
 const EventCard = ({ event, onDelete }) => {
   const navigate = useNavigate();
+  const { getEventPhotoCount } = useEvents();
 
   const handleCardClick = () => {
     navigate(`/events/${event.id}/gallery/upload`);
@@ -59,7 +61,7 @@ const EventCard = ({ event, onDelete }) => {
 
         <div className="event-card-stats">
           <div className="event-stat">
-            <span className="stat-value">{event.imageCount || 0}</span>
+            <span className="stat-value">{getEventPhotoCount(event.id)}</span>
             <span className="stat-label">Images</span>
           </div>
         </div>

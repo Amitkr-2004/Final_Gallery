@@ -137,6 +137,13 @@
 .recent-event-meta {
   font-size: 0.875rem;
   color: var(--text-secondary);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.recent-event-images {
+  font-size: 0.875rem;
+  color: var(--accent-primary);
+  font-weight: 600;
   margin: 0;
 }
 

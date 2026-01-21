@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Upload as UploadIcon, Folder, Image as ImageIcon, CheckCircle, XCircle, Loader, X, BarChart3 } from 'lucide-react';
+import { useEvents } from '../../hooks/useEvents';
 import './Upload.css';
 
 function Upload() {
   const navigate = useNavigate();
+  const { eventId } = useParams();
+  const { addPhotoToEvent } = useEvents();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
@@ -145,6 +148,11 @@ function Upload() {
           }
 
           const data = await response.json();
+
+          // Track photo-event association
+          if (data.photo_id && eventId) {
+            addPhotoToEvent(eventId, data.photo_id);
+          }
 
           // Update file status
           setSelectedFiles(prev =>

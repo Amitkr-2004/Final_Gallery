@@ -43,15 +43,16 @@ def upload_image(request):
     10. Return photo_id, embeddings, and matched persons
     """
     serializer = ImageUploadSerializer(data=request.data)
-    
+
     if not serializer.is_valid():
         return Response(
             {'error': 'Invalid request', 'details': serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     image_file = serializer.validated_data['image']
-    
+    event_id = request.data.get('event_id', None)  # Extract event_id from request
+
     try:
         # Compute image hash (SHA256)
         image_file.seek(0)  # Reset file pointer to beginning

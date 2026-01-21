@@ -1,8 +1,9 @@
 import React from 'react';
+import { Loader } from 'lucide-react';
 import Card from '../common/Card';
 import './SummaryCard.css';
 
-const SummaryCard = ({ icon: Icon, title, value, color = 'primary' }) => {
+const SummaryCard = ({ icon: Icon, title, value, color = 'primary', loading = false }) => {
   return (
     <Card className={`summary-card summary-card-${color}`} hoverable>
       <div className="summary-card-content">
@@ -11,7 +12,13 @@ const SummaryCard = ({ icon: Icon, title, value, color = 'primary' }) => {
         </div>
         <div className="summary-card-info">
           <h3 className="summary-card-title">{title}</h3>
-          <p className="summary-card-value">{value}</p>
+          {loading ? (
+            <div className="summary-card-loading">
+              <Loader size={20} className="spinner" />
+            </div>
+          ) : (
+            <p className="summary-card-value">{value}</p>
+          )}
         </div>
       </div>
     </Card>
