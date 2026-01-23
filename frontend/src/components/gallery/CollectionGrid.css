@@ -1,0 +1,160 @@
+.collection-grid-container {
+  width: 100%;
+  padding: 0;
+}
+
+.collection-header {
+  margin-bottom: 24px;
+}
+
+.collection-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+/* Masonry Grid */
+.collection-masonry-grid {
+  display: flex;
+  margin-left: -16px;
+  width: auto;
+}
+
+.collection-masonry-grid-column {
+  padding-left: 16px;
+  background-clip: padding-box;
+}
+
+.collection-masonry-grid-column > div {
+  margin-bottom: 16px;
+}
+
+/* Photo Item */
+.collection-photo-item {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f1f5f9;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.collection-photo-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.collection-photo-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Load More Button */
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+.btn-load-more {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-load-more:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-load-more:active {
+  transform: translateY(0);
+}
+
+.btn-load-more:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-load-more .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .collection-masonry-grid {
+    margin-left: -12px;
+  }
+
+  .collection-masonry-grid-column {
+    padding-left: 12px;
+  }
+
+  .collection-masonry-grid-column > div {
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .collection-header {
+    margin-bottom: 16px;
+  }
+
+  .collection-title {
+    font-size: 18px;
+  }
+
+  .collection-masonry-grid {
+    margin-left: -8px;
+  }
+
+  .collection-masonry-grid-column {
+    padding-left: 8px;
+  }
+
+  .collection-masonry-grid-column > div {
+    margin-bottom: 8px;
+  }
+
+  .load-more-container {
+    margin-top: 24px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .collection-title {
+    color: #f1f5f9;
+  }
+
+  .collection-photo-item {
+    background: #334155;
+  }
+
+  .collection-photo-item:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+}

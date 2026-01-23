@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Plus, FolderOpen, BarChart3, Settings, Menu, X, Camera } from 'lucide-react';
+import { Home, Plus, FolderOpen, BarChart3, Settings, Menu, X, Camera, UserCircle } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import './Sidebar.css';
 
@@ -13,6 +13,7 @@ const Sidebar = () => {
     { path: '/', label: 'Home', icon: Home },
     { path: '/create-event', label: 'Create Event', icon: Plus },
     { path: '/events', label: 'My Events', icon: FolderOpen },
+    { path: '/your-collection', label: 'Your Collection', icon: UserCircle },
     { path: '/analytics', label: 'Analytics', icon: BarChart3, isPlaceholder: true },
     { path: '/settings', label: 'Settings', icon: Settings, isPlaceholder: true },
   ];

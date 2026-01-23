@@ -8,6 +8,7 @@ import Collections from './components/gallery/Collections';
 import PersonPhotos from './components/gallery/PersonPhotos';
 import Upload from './components/gallery/Upload';
 import Stats from './components/gallery/Stats';
+import YourCollection from './components/gallery/YourCollection';
 import PlaceholderPage from './components/common/PlaceholderPage';
 import Sidebar from './components/layout/Sidebar';
 import { useTheme } from './hooks/useTheme';
@@ -38,6 +39,9 @@ function App() {
               <Route path="stats" element={<Stats />} />
               <Route path="persons/:personId/photos" element={<PersonPhotos />} />
             </Route>
+
+            {/* Your Collection */}
+            <Route path="/your-collection" element={<YourCollection />} />
 
             {/* Placeholder Routes */}
             <Route
