@@ -20,6 +20,37 @@ class Photo(models.Model):
                                 help_text="Event ID from frontend (e.g., 'evt_1234567890')")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
+    # Processing status and thumbnails (added to match database schema from migration 0005)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('processing', 'Processing'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='completed',
+        db_index=True,
+        help_text="Processing status: pending, processing, completed, failed"
+    )
+    processed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When background processing completed"
+    )
+    thumbnail_small = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="200x200 thumbnail for collections page"
+    )
+    thumbnail_medium = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="800x800 thumbnail for detail page"
+    )
+
     class Meta:
         ordering = ['-uploaded_at']
         verbose_name = 'Photo'
@@ -101,9 +132,17 @@ class PersonPhoto(models.Model):
     photo = models.ForeignKey(Photo, on_delete=models.CASCADE, related_name='person_photos')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Face detection confidence (added to match database schema from migration 0006)
+    confidence = models.FloatField(
+        default=0.0,
+        db_index=True,
+        validators=[MinValueValidator(0.0)],
+        help_text="Face detection confidence score (0.0-1.0). Higher = better quality."
+    )
+
     class Meta:
         unique_together = [['person', 'photo']]
-        ordering = ['-created_at']
+        ordering = ['-confidence', '-created_at']  # Order by confidence first, then by date
         verbose_name = 'Person Photo'
         verbose_name_plural = 'Person Photos'
         # Ensure no duplicate mappings at database level

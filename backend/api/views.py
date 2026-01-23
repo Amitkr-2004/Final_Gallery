@@ -1,5 +1,6 @@
 import hashlib
 import os
+import logging
 from django.conf import settings
 from django.db import IntegrityError
 from rest_framework import viewsets, status
@@ -11,6 +12,9 @@ from .serializers import ImageUploadSerializer, PhotoSerializer, PersonSerialize
 from .utils import get_image_upload_path, detect_faces_from_file, detect_faces_and_extract_embeddings, update_daily_statistics
 from .faiss_manager import get_faiss_manager
 import numpy as np
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -99,7 +103,8 @@ def upload_image(request):
                 try:
                     person_photo, created = PersonPhoto.objects.get_or_create(
                         person=person,
-                        photo=existing_photo
+                        photo=existing_photo,
+                        defaults={'confidence': confidence}  # Save face detection confidence
                     )
                 except IntegrityError:
                     # Handle race condition: if duplicate detected at DB level, get existing record
@@ -145,10 +150,19 @@ def upload_image(request):
         # Create Photo record
         # Store relative path from MEDIA_ROOT
         relative_path = os.path.join('images', filename).replace('\\', '/')
+
+        # Log before creating Photo record
+        logger.info(f"[PHOTO_CREATE] Creating Photo record: file_path={relative_path}, image_hash={image_hash}, event_id={event_id}, status=completed")
+
         photo = Photo.objects.create(
             file_path=relative_path,
-            image_hash=image_hash
+            image_hash=image_hash,
+            event_id=event_id,  # Save event_id (was extracted but not saved before)
+            status='completed'  # Set status explicitly (synchronous processing)
         )
+
+        # Log after successful creation
+        logger.info(f"[PHOTO_CREATE] Photo record created successfully: photo_id={photo.id}, file_path={photo.file_path}, event_id={photo.event_id}, status={photo.status}")
         
         # Detect faces and extract embeddings (only clear, well-detected faces)
         # Filter by detection confidence to avoid creating collections for unclear/blurry faces
@@ -179,7 +193,8 @@ def upload_image(request):
             try:
                 person_photo, created = PersonPhoto.objects.get_or_create(
                     person=person,
-                    photo=photo
+                    photo=photo,
+                    defaults={'confidence': confidence}  # Save face detection confidence
                 )
             except IntegrityError:
                 # Handle race condition: if duplicate detected at DB level, get existing record
@@ -205,8 +220,6 @@ def upload_image(request):
             )
         except Exception as stats_error:
             # Log error but don't fail the upload
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"[STATISTICS] Failed to update statistics: {str(stats_error)}")
 
         return Response({

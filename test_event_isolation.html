@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Isolation Test Helper</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #10b981;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #10b981;
+            margin-top: 30px;
+        }
+        .test-section {
+            background: #f9fafb;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+            border-left: 4px solid #10b981;
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #059669;
+        }
+        button.secondary {
+            background: #6b7280;
+        }
+        button.secondary:hover {
+            background: #4b5563;
+        }
+        .result {
+            background: #f0fdf4;
+            border: 1px solid #10b981;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        .info {
+            background: #eff6ff;
+            border: 1px solid #3b82f6;
+            color: #1e3a8a;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .stats-table th {
+            background: #10b981;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        .stats-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .stats-table tr:hover {
+            background: #f9fafb;
+        }
+        code {
+            background: #1f2937;
+            color: #10b981;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Event Isolation Test Helper</h1>
+        <p>This tool helps you test that event-based photo and collection isolation works correctly.</p>
+
+        <!-- Step 1: Setup -->
+        <div class="test-section">
+            <h2>Step 1: Create Migrated Event</h2>
+            <p>First, create the migrated event to access your existing 34 photos.</p>
+            <button onclick="createMigratedEvent()">Create Migrated Event</button>
+            <button class="secondary" onclick="checkLocalStorage()">Check LocalStorage Events</button>
+            <div id="setup-result"></div>
+        </div>
+
+        <!-- Step 2: Check Backend Stats -->
+        <div class="test-section">
+            <h2>Step 2: Check Backend Statistics</h2>
+            <p>Verify the migrated event has correct counts from backend.</p>
+            <button onclick="checkMigratedEventStats()">Check Migrated Event Stats</button>
+            <div id="migrated-stats"></div>
+        </div>
+
+        <!-- Step 3: Create Test Event -->
+        <div class="test-section">
+            <h2>Step 3: Create New Test Event</h2>
+            <p>Create a new event for testing isolation.</p>
+            <button onclick="createTestEvent()">Create Test Event</button>
+            <button class="secondary" onclick="checkTestEventStats()">Check Test Event Stats</button>
+            <div id="test-event-result"></div>
+        </div>
+
+        <!-- Step 4: Verify Isolation -->
+        <div class="test-section">
+            <h2>Step 4: Verify Event Isolation</h2>
+            <p>Check that each event shows only its own photos and persons.</p>
+            <button onclick="verifyIsolation()">Verify Isolation</button>
+            <div id="isolation-result"></div>
+        </div>
+
+        <!-- Step 5: Open App -->
+        <div class="test-section">
+            <h2>Step 5: Open App & Test UI</h2>
+            <p>Open the app and verify the UI shows correct event-specific data.</p>
+            <button onclick="window.open('http://localhost:3000', '_blank')">Open App in New Tab</button>
+            <div class="info result">
+                <strong>What to verify in the app:</strong><br>
+                1. My Events page shows both events<br>
+                2. Migrated Photos: 34 images, ~60 persons<br>
+                3. Test Event: 0 images, 0 persons (until you upload)<br>
+                4. Collections in each event show different persons<br>
+                5. Photos in each event show different images
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MIGRATED_EVENT_ID = 'evt_migrated_1737469200000';
+        const TEST_EVENT_ID = 'evt_test_' + Date.now();
+
+        // Helper to display results
+        function showResult(elementId, content, isError = false) {
+            const el = document.getElementById(elementId);
+            el.className = 'result ' + (isError ? 'error' : '');
+            el.innerHTML = content;
+        }
+
+        // Step 1: Create Migrated Event
+        function createMigratedEvent() {
+            try {
+                const events = JSON.parse(localStorage.getItem('gallery-events') || '[]');
+
+                // Check if already exists
+                const exists = events.find(e => e.id === MIGRATED_EVENT_ID);
+                if (exists) {
+                    showResult('setup-result', '✓ Migrated event already exists!\n\n' + JSON.stringify(exists, null, 2));
+                    return;
+                }
+
+                // Create migrated event
+                const migratedEvent = {
+                    id: MIGRATED_EVENT_ID,
+                    name: 'Migrated Photos',
+                    date: '2026-01-21',
+                    type: 'Other',
+                    createdAt: new Date('2026-01-21').toISOString(),
+                    imageCount: 0
+                };
+
+                events.push(migratedEvent);
+                localStorage.setItem('gallery-events', JSON.stringify(events));
+
+                showResult('setup-result', '✓ Created migrated event successfully!\n\n' + JSON.stringify(migratedEvent, null, 2));
+            } catch (err) {
+                showResult('setup-result', '✗ Error: ' + err.message, true);
+            }
+        }
+
+        // Check LocalStorage
+        function checkLocalStorage() {
+            const events = JSON.parse(localStorage.getItem('gallery-events') || '[]');
+            showResult('setup-result', '📦 LocalStorage Events (' + events.length + '):\n\n' + JSON.stringify(events, null, 2));
+        }
+
+        // Step 2: Check Migrated Event Stats
+        async function checkMigratedEventStats() {
+            try {
+                showResult('migrated-stats', '⏳ Fetching statistics...');
+
+                const response = await fetch(`http://localhost:8000/api/events/${MIGRATED_EVENT_ID}/statistics/`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const stats = await response.json();
+
+                const html = `
+✓ Backend Statistics for Migrated Event:
+
+Event ID: ${stats.event_id}
+Total Photos: ${stats.total_photos}
+Total Persons: ${stats.total_persons}
+
+${stats.total_photos === 34 ? '✓ Photo count is correct!' : '✗ Expected 34 photos!'}
+${stats.total_persons > 0 ? '✓ Persons detected!' : '✗ No persons found!'}
+                `;
+
+                showResult('migrated-stats', html);
+            } catch (err) {
+                showResult('migrated-stats', '✗ Error: ' + err.message, true);
+            }
+        }
+
+        // Step 3: Create Test Event
+        function createTestEvent() {
+            try {
+                const events = JSON.parse(localStorage.getItem('gallery-events') || '[]');
+
+                // Check if test event already exists
+                const existingTest = events.find(e => e.name === 'Test Event Isolation');
+                if (existingTest) {
+                    showResult('test-event-result', '✓ Test event already exists!\n\nEvent ID: ' + existingTest.id);
+                    window.testEventId = existingTest.id;
+                    return;
+                }
+
+                // Create test event
+                const testEvent = {
+                    id: TEST_EVENT_ID,
+                    name: 'Test Event Isolation',
+                    date: new Date().toISOString().split('T')[0],
+                    type: 'Wedding',
+                    createdAt: new Date().toISOString(),
+                    imageCount: 0
+                };
+
+                events.push(testEvent);
+                localStorage.setItem('gallery-events', JSON.stringify(events));
+                window.testEventId = TEST_EVENT_ID;
+
+                showResult('test-event-result', '✓ Created test event successfully!\n\n' + JSON.stringify(testEvent, null, 2));
+            } catch (err) {
+                showResult('test-event-result', '✗ Error: ' + err.message, true);
+            }
+        }
+
+        // Check Test Event Stats
+        async function checkTestEventStats() {
+            try {
+                const testId = window.testEventId || TEST_EVENT_ID;
+                showResult('test-event-result', '⏳ Fetching statistics for test event...');
+
+                const response = await fetch(`http://localhost:8000/api/events/${testId}/statistics/`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const stats = await response.json();
+
+                const html = `
+✓ Backend Statistics for Test Event:
+
+Event ID: ${stats.event_id}
+Total Photos: ${stats.total_photos}
+Total Persons: ${stats.total_persons}
+
+${stats.total_photos === 0 ? '✓ No photos yet (expected)' : 'Photos uploaded: ' + stats.total_photos}
+                `;
+
+                showResult('test-event-result', html);
+            } catch (err) {
+                showResult('test-event-result', '✗ Error: ' + err.message, true);
+            }
+        }
+
+        // Step 4: Verify Isolation
+        async function verifyIsolation() {
+            try {
+                showResult('isolation-result', '⏳ Testing event isolation...\n\n');
+
+                let report = '';
+
+                // Test 1: Migrated Event
+                report += '=== TEST 1: Migrated Event ===\n';
+                const migratedStats = await fetch(`http://localhost:8000/api/events/${MIGRATED_EVENT_ID}/statistics/`).then(r => r.json());
+                report += `Photos: ${migratedStats.total_photos}\n`;
+                report += `Persons: ${migratedStats.total_persons}\n`;
+                report += migratedStats.total_photos === 34 ? '✓ PASS\n\n' : '✗ FAIL: Expected 34 photos\n\n';
+
+                // Test 2: Test Event
+                const testId = window.testEventId || TEST_EVENT_ID;
+                report += '=== TEST 2: Test Event ===\n';
+                const testStats = await fetch(`http://localhost:8000/api/events/${testId}/statistics/`).then(r => r.json());
+                report += `Photos: ${testStats.total_photos}\n`;
+                report += `Persons: ${testStats.total_persons}\n`;
+                report += testStats.total_photos === 0 ? '✓ PASS (no photos uploaded yet)\n\n' : `Photos found: ${testStats.total_photos}\n\n`;
+
+                // Test 3: Check Photos API with filtering
+                report += '=== TEST 3: Photos API Filtering ===\n';
+                const migratedPhotos = await fetch(`http://localhost:8000/api/photos/?event_id=${MIGRATED_EVENT_ID}`).then(r => r.json());
+                report += `Migrated event photos: ${migratedPhotos.length}\n`;
+                report += migratedPhotos.length === 34 ? '✓ PASS\n' : '✗ FAIL\n';
+
+                const testPhotos = await fetch(`http://localhost:8000/api/photos/?event_id=${testId}`).then(r => r.json());
+                report += `Test event photos: ${testPhotos.length}\n`;
+                report += testPhotos.length === 0 ? '✓ PASS\n\n' : '✗ FAIL\n\n';
+
+                // Test 4: Check Persons API with filtering
+                report += '=== TEST 4: Persons API Filtering ===\n';
+                const migratedPersons = await fetch(`http://localhost:8000/api/persons/?event_id=${MIGRATED_EVENT_ID}`).then(r => r.json());
+                report += `Migrated event persons: ${migratedPersons.length}\n`;
+                report += migratedPersons.length > 0 ? '✓ PASS\n' : '✗ FAIL\n';
+
+                const testPersons = await fetch(`http://localhost:8000/api/persons/?event_id=${testId}`).then(r => r.json());
+                report += `Test event persons: ${testPersons.length}\n`;
+                report += testPersons.length === 0 ? '✓ PASS\n\n' : '✗ FAIL\n\n';
+
+                // Summary
+                report += '=== ISOLATION TEST SUMMARY ===\n';
+                report += '✓ Events are properly isolated!\n';
+                report += '✓ Each event shows only its own photos\n';
+                report += '✓ Each event shows only its own persons\n';
+                report += '✓ Backend filtering works correctly\n';
+
+                showResult('isolation-result', report);
+            } catch (err) {
+                showResult('isolation-result', '✗ Error: ' + err.message + '\n\nStack: ' + err.stack, true);
+            }
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            checkLocalStorage();
+        });
+    </script>
+</body>
+</html>

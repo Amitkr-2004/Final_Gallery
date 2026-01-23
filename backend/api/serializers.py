@@ -14,8 +14,11 @@ class PhotoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Photo
-        fields = ['id', 'file_path', 'image_hash', 'event_id', 'uploaded_at', 'image_url']
-        read_only_fields = ['id', 'image_hash', 'uploaded_at']
+        fields = [
+            'id', 'file_path', 'image_hash', 'event_id', 'uploaded_at', 'image_url',
+            'status', 'processed_at', 'thumbnail_small', 'thumbnail_medium'
+        ]
+        read_only_fields = ['id', 'image_hash', 'uploaded_at', 'status', 'processed_at']
     
     def get_image_url(self, obj):
         """Return the full URL for the image."""

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Storage</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        .info {
+            background: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+            padding: 1rem;
+            margin: 1rem 0;
+            text-align: left;
+        }
+        .success {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: none;
+        }
+        button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0.5rem;
+        }
+        button:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+        button.secondary {
+            background: #6b7280;
+        }
+        button.secondary:hover {
+            background: #4b5563;
+        }
+        .details {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.875rem;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Clear Local Storage</h1>
+
+        <div class="info">
+            <strong>⚠️ Warning:</strong> This will permanently delete:
+            <ul style="margin: 0.5rem 0;">
+                <li>All events</li>
+                <li>Photo-event mappings</li>
+                <li>All frontend data</li>
+            </ul>
+            <p style="margin-top: 0.5rem;"><strong>Backend database has already been cleared.</strong></p>
+        </div>
+
+        <div id="storageDetails" class="details">
+            Checking storage...
+        </div>
+
+        <button onclick="clearStorage()">Clear All Storage</button>
+        <button class="secondary" onclick="window.location.href='/'">Go to Dashboard</button>
+
+        <div id="success" class="success">
+            ✅ <strong>Success!</strong> All localStorage has been cleared.
+            <br><br>
+            <a href="/" style="color: #10b981; font-weight: 600;">← Return to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        function updateStorageInfo() {
+            const events = localStorage.getItem('gallery-events');
+            const photos = localStorage.getItem('gallery-event-photos');
+
+            let html = '<strong>Current localStorage:</strong><br>';
+
+            if (events) {
+                const eventsData = JSON.parse(events);
+                html += `<br>• gallery-events: ${eventsData.length} events`;
+            } else {
+                html += '<br>• gallery-events: empty';
+            }
+
+            if (photos) {
+                const photosData = JSON.parse(photos);
+                const totalPhotos = Object.values(photosData).reduce((sum, arr) => sum + arr.length, 0);
+                html += `<br>• gallery-event-photos: ${totalPhotos} photos tracked`;
+            } else {
+                html += '<br>• gallery-event-photos: empty';
+            }
+
+            document.getElementById('storageDetails').innerHTML = html;
+        }
+
+        function clearStorage() {
+            if (confirm('Are you sure you want to clear all local storage? This cannot be undone.')) {
+                localStorage.removeItem('gallery-events');
+                localStorage.removeItem('gallery-event-photos');
+
+                // Clear any other gallery-related items
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('gallery-')) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                document.getElementById('success').style.display = 'block';
+                updateStorageInfo();
+            }
+        }
+
+        // Update storage info on load
+        updateStorageInfo();
+    </script>
+</body>
+</html>
