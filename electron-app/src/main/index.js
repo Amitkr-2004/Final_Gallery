@@ -3,7 +3,7 @@
  * Simple local image gallery with upload functionality
  */
 
-const { app, BrowserWindow, protocol } = require('electron');
+const { app, BrowserWindow, protocol, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { getConfigService } = require('./storage/config');
@@ -13,6 +13,7 @@ const { registerIPCHandlers } = require('./ipc/handlers');
 
 // Keep a global reference to prevent garbage collection
 let mainWindow = null;
+let tray = null;
 let configService = null;
 let logger = null;
 
@@ -109,7 +110,23 @@ function createWindow() {
     logger.info('Main window shown');
   });
 
-  // Handle window close
+  // Minimize to tray instead of closing
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+
+      // Update tray menu
+      if (tray) {
+        updateTrayMenu();
+      }
+
+      logger.info('Main window minimized to tray');
+      return false;
+    }
+  });
+
+  // Handle window closed
   mainWindow.on('closed', () => {
     mainWindow = null;
     logger.info('Main window closed');
@@ -122,6 +139,124 @@ function createWindow() {
   });
 
   logger.info('Main window created');
+}
+
+/**
+ * Create system tray icon
+ */
+function createTray() {
+  // Create a simple 16x16 icon - using a basic approach that works on all platforms
+  // Create buffer for a 16x16 RGBA image
+  const size = 16;
+  const buffer = Buffer.alloc(size * size * 4);
+
+  // Fill with green color (RGBA)
+  for (let i = 0; i < size * size; i++) {
+    const offset = i * 4;
+    // Draw a green square
+    buffer[offset] = 76;      // R
+    buffer[offset + 1] = 175; // G
+    buffer[offset + 2] = 80;  // B
+    buffer[offset + 3] = 255; // A (full opacity)
+  }
+
+  const icon = nativeImage.createFromBuffer(buffer, {
+    width: size,
+    height: size
+  });
+
+  tray = new Tray(icon);
+  tray.setToolTip('Image Gallery - Online');
+
+  updateTrayMenu();
+
+  // Click to show/hide window
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+
+  logger.info('System tray created');
+}
+
+/**
+ * Update tray context menu
+ */
+function updateTrayMenu() {
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Image Gallery',
+      enabled: false
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: mainWindow && mainWindow.isVisible() ? 'Hide Window' : 'Show Window',
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isVisible()) {
+            mainWindow.hide();
+          } else {
+            mainWindow.show();
+            mainWindow.focus();
+          }
+          updateTrayMenu();
+        }
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Upload Files',
+      click: async () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('navigate-to', '/upload');
+        }
+      }
+    },
+    {
+      label: 'View Gallery',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('navigate-to', '/gallery');
+        }
+      }
+    },
+    {
+      label: 'Dashboard',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('navigate-to', '/dashboard');
+        }
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Quit',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
 }
 
 /**
@@ -161,6 +296,9 @@ async function initializeApp() {
 
     // 7. Create main window
     createWindow();
+
+    // 8. Create system tray
+    createTray();
 
     logger.info('=== Application Initialized Successfully ===');
   } catch (error) {

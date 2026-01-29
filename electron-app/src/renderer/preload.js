@@ -33,6 +33,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getVersion: () => ipcRenderer.invoke('core:system:get-version'),
     getAppName: () => ipcRenderer.invoke('core:system:get-app-name'),
     openFolder: (path) => ipcRenderer.invoke('core:system:open-folder', path)
+  },
+
+  // Navigation API (for tray menu)
+  onNavigate: (callback) => {
+    ipcRenderer.on('navigate-to', (event, route) => callback(route));
   }
 });
 

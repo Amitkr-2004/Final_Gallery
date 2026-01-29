@@ -105,6 +105,8 @@
   justify-content: center;
   margin-bottom: 30px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 10;
 }
 
 .btn {
@@ -119,6 +121,9 @@
   align-items: center;
   gap: 10px;
   font-family: inherit;
+  position: relative;
+  z-index: 100;
+  pointer-events: auto;
 }
 
 .btn-icon {
