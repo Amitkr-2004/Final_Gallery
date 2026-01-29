@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import Photo, Person, DailyStatistics
+from .models import Photo, Person, DailyStatistics, ScheduledJob
 from django.conf import settings
+from django.utils import timezone
 
 
 class ImageUploadSerializer(serializers.Serializer):
@@ -54,3 +55,59 @@ class DailyStatisticsSerializer(serializers.ModelSerializer):
         model = DailyStatistics
         fields = ['id', 'date', 'photos_uploaded', 'faces_detected', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ScheduledJobSerializer(serializers.ModelSerializer):
+    """Serializer for ScheduledJob model."""
+
+    class Meta:
+        model = ScheduledJob
+        fields = [
+            'id', 'scheduled_time', 'folder_path', 'status',
+            'created_at', 'started_at', 'completed_at',
+            'event_id', 'images_processed', 'faces_detected',
+            'error_log'
+        ]
+        read_only_fields = [
+            'id', 'status', 'created_at', 'started_at', 'completed_at',
+            'event_id', 'images_processed', 'faces_detected', 'error_log'
+        ]
+
+    def validate_scheduled_time(self, value):
+        """Ensure scheduled time is in the future."""
+        now = timezone.now()
+        # Allow times that are at least 30 seconds in the future (to account for processing time)
+        if value < now - timezone.timedelta(seconds=30):
+            raise serializers.ValidationError(
+                "Scheduled time must be in the future or very recent (within 30 seconds)."
+            )
+        return value
+
+    def validate_folder_path(self, value):
+        """Validate local folder path."""
+        from pathlib import Path
+        import os
+
+        # Convert to Path object
+        path = Path(value)
+
+        # Check if path exists
+        if not path.exists():
+            raise serializers.ValidationError(
+                f"Folder path does not exist: {value}"
+            )
+
+        # Check if it's a directory
+        if not path.is_dir():
+            raise serializers.ValidationError(
+                f"Path must be a directory, not a file: {value}"
+            )
+
+        # Check read permissions
+        if not os.access(path, os.R_OK):
+            raise serializers.ValidationError(
+                f"Folder is not readable (permission denied): {value}"
+            )
+
+        # Return absolute path for consistency
+        return str(path.absolute())

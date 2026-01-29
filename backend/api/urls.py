@@ -2,6 +2,13 @@ from django.urls import path
 from . import views
 from .delete_views import delete_photo, delete_person
 from .collection_views import scan_face, get_collection_photos
+from .scheduler_views import ScheduledJobView, JobStatusView
+from .gcs_views import (
+    get_signed_upload_url,
+    get_signed_upload_urls_batch,
+    register_upload,
+    test_gcs_connection
+)
 
 urlpatterns = [
     path('health/', views.health_check, name='health-check'),
@@ -15,4 +22,12 @@ urlpatterns = [
     # Your Collection feature
     path('collection/scan-face/', scan_face, name='scan-face'),
     path('collection/<int:person_id>/photos/', get_collection_photos, name='collection-photos'),
+    # Time Scheduler feature
+    path('scheduler/job/', ScheduledJobView.as_view(), name='scheduled-job'),
+    path('scheduler/job/status/', JobStatusView.as_view(), name='job-status'),
+    # GCS Upload endpoints (for Electron app)
+    path('gcs/get-signed-upload-url/', get_signed_upload_url, name='gcs-signed-upload-url'),
+    path('gcs/get-signed-upload-urls-batch/', get_signed_upload_urls_batch, name='gcs-signed-upload-urls-batch'),
+    path('gcs/register-upload/', register_upload, name='gcs-register-upload'),
+    path('gcs/test-connection/', test_gcs_connection, name='gcs-test-connection'),
 ]

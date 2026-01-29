@@ -1,0 +1,40 @@
+{
+  "app": {
+    "environment": "development"
+  },
+  "gcp": {
+    "bucketName": "your-dev-image-bucket",
+    "projectId": "your-dev-project-id"
+  },
+  "storage": {
+    "basePath": "./app-data-dev"
+  },
+  "download": {
+    "maxConcurrentDownloads": 3,
+    "retryAttempts": 2
+  },
+  "processing": {
+    "maxConcurrentWorkers": 2,
+    "batchSize": 5
+  },
+  "sync": {
+    "autoSyncEnabled": false,
+    "syncIntervalMinutes": 60
+  },
+  "logging": {
+    "level": "debug",
+    "logToConsole": true,
+    "logToFile": true
+  },
+  "backend": {
+    "apiUrl": "http://localhost:8000/api",
+    "syncResults": false
+  },
+  "performance": {
+    "enableGPU": false,
+    "maxMemoryUsageMB": 1024
+  },
+  "ui": {
+    "showProgressNotifications": true
+  }
+}

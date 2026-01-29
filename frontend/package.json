@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
+    "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.3",
     "react-masonry-css": "^1.0.16",
     "react-router-dom": "^7.12.0",

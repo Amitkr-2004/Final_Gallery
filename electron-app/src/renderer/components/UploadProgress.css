@@ -1,0 +1,159 @@
+/**
+ * Upload Progress Styles
+ */
+
+.upload-progress-overlay {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: 1000;
+  width: 450px;
+  max-width: calc(100vw - var(--spacing-xl));
+  animation: slideInUp var(--transition-slow);
+}
+
+.upload-progress-card {
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--color-border);
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.upload-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.upload-progress-header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+/* Overall Progress */
+.upload-overall {
+  margin-bottom: var(--spacing-lg);
+}
+
+.upload-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.stat-item strong {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Files List */
+.upload-files-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: var(--spacing-md);
+  padding-right: var(--spacing-xs);
+}
+
+.upload-file-item {
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.upload-file-item:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.file-icon {
+  font-size: var(--font-size-xl);
+  flex-shrink: 0;
+}
+
+.file-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.file-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-meta {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.file-progress {
+  margin-top: var(--spacing-xs);
+}
+
+/* Scrollbar */
+.upload-files-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.upload-files-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.upload-files-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 100%);
+  border-radius: var(--radius-full);
+}
+
+.upload-files-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 100%);
+}
+
+/* Animations */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .upload-progress-overlay {
+    width: calc(100vw - var(--spacing-lg) * 2);
+    bottom: var(--spacing-md);
+    right: var(--spacing-md);
+  }
+
+  .upload-files-list {
+    max-height: 200px;
+  }
+}

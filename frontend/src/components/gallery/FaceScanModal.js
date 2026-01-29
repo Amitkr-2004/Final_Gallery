@@ -30,6 +30,20 @@ function FaceScanModal({ isOpen, onClose, onImageCapture, loading }) {
     };
   }, [cameraStream]);
 
+  // Reset all state when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      // Modal is closing - reset everything
+      if (cameraStream) {
+        stopCamera(cameraStream);
+      }
+      setMode('select');
+      setCameraStream(null);
+      setIsVideoReady(false);
+      setError(null);
+    }
+  }, [isOpen, cameraStream]);
+
   // Reset video ready state when mode changes
   useEffect(() => {
     if (mode !== 'camera') {
@@ -48,7 +62,13 @@ function FaceScanModal({ isOpen, onClose, onImageCapture, loading }) {
 
     console.log('[FaceScanModal] Attaching stream to video element');
 
-    // Attach stream to video
+    // Clear any existing stream first
+    if (video.srcObject) {
+      console.log('[FaceScanModal] Clearing existing video srcObject');
+      video.srcObject = null;
+    }
+
+    // Attach new stream to video
     video.srcObject = cameraStream;
 
     const handleLoadedMetadata = () => {
@@ -83,9 +103,16 @@ function FaceScanModal({ isOpen, onClose, onImageCapture, loading }) {
     video.addEventListener('error', handleError);
 
     return () => {
+      // Cleanup event listeners
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('error', handleError);
+
+      // Clear video srcObject to prevent issues on next mount
+      if (video.srcObject) {
+        console.log('[FaceScanModal] Cleanup: Clearing video srcObject');
+        video.srcObject = null;
+      }
     };
   }, [mode, cameraStream]);
 

@@ -1,0 +1,142 @@
+================================================================================
+  TIME SCHEDULER - QUICK FIX
+================================================================================
+
+The diagnostic tool is telling you exactly what to do!
+
+PROBLEM: Celery Beat is NOT running
+RESULT:  Scheduled jobs stay in "Pending" forever and never execute
+
+================================================================================
+  SOLUTION: Start Celery Beat
+================================================================================
+
+STEP 1: Open File Explorer
+        Navigate to: D:\Gallery_VSCode\backend
+
+STEP 2: Double-click this file:
+        start_celery_beat.bat
+
+        A black window will open with text like:
+        "Starting Celery Beat..."
+        "beat: Starting..."
+
+STEP 3: KEEP THAT WINDOW OPEN!
+        Don't close it!
+
+STEP 4: Also double-click:
+        start_celery_worker.bat
+
+        Keep this window open too!
+
+STEP 5: Test your scheduler:
+        - Go to: http://localhost:3000/time-scheduler
+        - Enter folder: C:\Users\AMIT\Downloads\Images
+        - Select time: 2 minutes from now
+        - Click "Save Schedule"
+        - Wait 2 minutes
+        - Watch status change: Pending → Running → Completed
+
+================================================================================
+  VERIFY IT WORKED
+================================================================================
+
+Double-click: CHECK_SCHEDULER.bat
+
+You should see:
+  "✓ Celery Beat is RUNNING"
+
+If you still see "STOPPED", the batch file didn't start correctly.
+Check for error messages in the window.
+
+================================================================================
+  REQUIRED WINDOWS OPEN
+================================================================================
+
+You need 3 windows open at the same time:
+
+  [1] Django Server      → python manage.py runserver
+  [2] Celery Worker      → start_celery_worker.bat
+  [3] Celery Beat        → start_celery_beat.bat  <-- THIS IS THE CRITICAL ONE
+
+================================================================================
+  STILL NOT WORKING?
+================================================================================
+
+Common issues:
+
+1. Virtual environment not found
+   → Check if D:\Gallery_VSCode\backend\venv exists
+   → If not, create it: python -m venv venv
+
+2. Celery not installed
+   → Activate venv: venv\Scripts\activate
+   → Install: pip install celery
+
+3. Port already in use
+   → A service is already running
+   → Close the existing window and try again
+
+4. Folder path doesn't exist
+   → Make sure C:\Users\AMIT\Downloads\Images exists
+   → Check spelling and path carefully
+
+================================================================================
+  WHAT EACH SERVICE DOES
+================================================================================
+
+Django Server:
+  - Runs the API backend
+  - Handles web requests
+  - Required for: Everything
+
+Celery Worker:
+  - Processes background tasks
+  - Runs face detection
+  - Creates thumbnails
+  - Required for: Image processing
+
+Celery Beat:
+  - Checks every minute for scheduled jobs
+  - Triggers jobs at scheduled time
+  - Required for: TIME SCHEDULER ONLY
+
+Without Celery Beat, jobs will NEVER execute automatically!
+
+================================================================================
+  QUICK TEST
+================================================================================
+
+1. Make sure you have images in: C:\Users\AMIT\Downloads\Images
+
+2. Check the folder exists:
+   - Open Command Prompt
+   - Type: dir "C:\Users\AMIT\Downloads\Images"
+   - You should see your image files
+
+3. Start all 3 services (see above)
+
+4. Schedule a job for 2 minutes from now
+
+5. Watch the Celery Beat window - you should see activity every minute
+
+6. When your scheduled time arrives, the Celery Worker window should show:
+   [Job 1] Starting execution
+   [Job 1] Processing images...
+   [Job 1] Completed successfully
+
+7. Refresh your browser - status should be "Completed"
+
+================================================================================
+  SUMMARY
+================================================================================
+
+The error message you saw is NOT an error - it's CORRECT!
+
+It's telling you: "Celery Beat is not running, please start it"
+
+Solution: Double-click start_celery_beat.bat and keep it open!
+
+That's it! 🎉
+
+================================================================================

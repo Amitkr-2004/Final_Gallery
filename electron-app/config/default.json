@@ -1,0 +1,24 @@
+{
+  "app": {
+    "name": "Image Gallery",
+    "version": "1.0.0",
+    "environment": "development"
+  },
+  "storage": {
+    "appDataPath": "./app-data",
+    "uploadPath": "./app-data/uploads",
+    "databasePath": "./app-data/database",
+    "logsPath": "./app-data/logs"
+  },
+  "ui": {
+    "windowWidth": 1200,
+    "windowHeight": 800,
+    "minWidth": 800,
+    "minHeight": 600
+  },
+  "logging": {
+    "level": "info",
+    "maxFileSizeMB": 10,
+    "maxFiles": 5
+  }
+}

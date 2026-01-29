@@ -1,0 +1,31 @@
+# Core Django
+Django==4.2.16
+djangorestframework==3.14.0
+django-cors-headers==4.3.0
+
+# Database
+psycopg2-binary==2.9.9
+
+# Celery for task queue
+celery==5.3.4
+redis==5.0.1
+
+# Image processing
+Pillow==10.1.0
+insightface==0.7.3
+onnxruntime==1.16.3
+
+# Face detection and embeddings
+faiss-cpu==1.7.4
+numpy==1.24.3
+
+# Google Drive integration
+google-api-python-client==2.110.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+
+# Google Cloud Storage for uploads
+google-cloud-storage==2.14.0
+
+# Utilities
+python-dotenv==1.0.0

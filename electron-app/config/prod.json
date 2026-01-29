@@ -1,0 +1,49 @@
+{
+  "app": {
+    "environment": "production"
+  },
+  "gcp": {
+    "bucketName": "your-prod-image-bucket",
+    "projectId": "your-prod-project-id",
+    "region": "us-central1"
+  },
+  "download": {
+    "maxConcurrentDownloads": 8,
+    "chunkSizeBytes": 10485760,
+    "retryAttempts": 5,
+    "retryBackoffMultiplier": 2,
+    "timeoutMs": 60000
+  },
+  "processing": {
+    "maxConcurrentWorkers": 6,
+    "batchSize": 20
+  },
+  "sync": {
+    "autoSyncEnabled": true,
+    "syncIntervalMinutes": 15,
+    "syncOnStartup": true,
+    "maxFilesPerSync": 5000
+  },
+  "logging": {
+    "level": "info",
+    "logToConsole": false,
+    "logToFile": true,
+    "maxFileSize": "20m",
+    "maxFiles": 10
+  },
+  "backend": {
+    "apiUrl": "https://api.yourproduction.com/api",
+    "syncResults": true,
+    "requestTimeout": 30000,
+    "retryAttempts": 5
+  },
+  "performance": {
+    "enableGPU": true,
+    "maxMemoryUsageMB": 4096,
+    "diskSpaceThresholdGB": 10,
+    "cleanupOldFilesAfterDays": 60
+  },
+  "ui": {
+    "showProgressNotifications": true
+  }
+}

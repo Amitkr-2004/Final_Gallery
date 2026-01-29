@@ -1,0 +1,102 @@
+/**
+ * Progress Bar Styles
+ */
+
+.progress-bar {
+  width: 100%;
+}
+
+/* Header */
+.progress-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.progress-bar-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.progress-bar-percentage {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Track */
+.progress-bar-track {
+  position: relative;
+  width: 100%;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar-sm .progress-bar-track {
+  height: 4px;
+}
+
+.progress-bar-md .progress-bar-track {
+  height: 8px;
+}
+
+.progress-bar-lg .progress-bar-track {
+  height: 12px;
+}
+
+/* Fill */
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.progress-bar-primary .progress-bar-fill {
+  background: var(--color-primary);
+}
+
+.progress-bar-success .progress-bar-fill {
+  background: var(--color-success);
+}
+
+.progress-bar-warning .progress-bar-fill {
+  background: var(--color-warning);
+}
+
+.progress-bar-error .progress-bar-fill {
+  background: var(--color-error);
+}
+
+.progress-bar-info .progress-bar-fill {
+  background: var(--color-info);
+}
+
+/* Animated */
+.progress-bar-animated .progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

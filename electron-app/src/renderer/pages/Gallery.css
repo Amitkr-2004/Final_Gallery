@@ -1,0 +1,13 @@
+/**
+ * Gallery Page Styles
+ */
+
+.gallery-page {
+  /* Inherits from Page.css */
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-xl) 0;
+}

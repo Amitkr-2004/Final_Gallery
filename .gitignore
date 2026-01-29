@@ -37,6 +37,15 @@ db.sqlite3-journal
 # Environment variables
 .env
 
+# Google Drive credentials (Time Scheduler)
+drive_credentials.json
+backend/drive_credentials.json
+backend/temp_downloads/
+
+# FAISS index files
+backend/faiss_index.bin
+backend/faiss_id_map.npy
+
 # Node
 node_modules/
 npm-debug.log*

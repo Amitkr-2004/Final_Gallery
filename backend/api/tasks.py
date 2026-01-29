@@ -291,3 +291,102 @@ def detect_and_match_faces(photo):
     except Exception as e:
         logger.error(f"Error in face detection for photo {photo.id}: {str(e)}", exc_info=True)
         return 0
+
+
+# ============================================================================
+# SCHEDULER TASKS - Time Scheduler Feature
+# ============================================================================
+
+@shared_task
+def check_and_execute_scheduled_jobs():
+    """
+    Periodic task to check for scheduled jobs that need execution.
+
+    Runs every minute via Celery Beat.
+    Finds all pending jobs where scheduled_time has passed and executes them.
+    """
+    from .models import ScheduledJob
+
+    logger.info("[Scheduler] Checking for scheduled jobs...")
+
+    now = timezone.now()
+
+    # Find pending jobs that are due for execution
+    jobs = ScheduledJob.objects.filter(
+        status='pending',
+        scheduled_time__lte=now,
+        is_active=True
+    )
+
+    count = jobs.count()
+    if count == 0:
+        logger.debug("[Scheduler] No jobs to execute")
+        return
+
+    logger.info(f"[Scheduler] Found {count} job(s) to execute")
+
+    # Launch execution task for each job
+    for job in jobs:
+        logger.info(f"[Scheduler] Launching execution for job {job.id}")
+        execute_scheduled_job.delay(job.id)
+
+
+@shared_task(bind=True, max_retries=0)  # No auto-retry (handled manually in executor)
+def execute_scheduled_job(self, job_id):
+    """
+    Execute a single scheduled job.
+
+    This task orchestrates the complete pipeline:
+    1. Fetch images from Google Drive
+    2. Create "Student Images" event
+    3. Upload and process each image
+    4. Trigger face detection
+    5. Update statistics
+
+    Args:
+        job_id: ID of ScheduledJob to execute
+
+    Returns:
+        dict: Execution result with success flag and stats/error
+    """
+    from .models import ScheduledJob
+    from .job_executor import JobExecutor
+
+    logger.info(f"[Task {self.request.id}] Executing scheduled job {job_id}")
+
+    try:
+        # Get job instance
+        job = ScheduledJob.objects.get(id=job_id, is_active=True)
+
+        # Check if already running (race condition protection)
+        if job.status == 'running':
+            logger.warning(f"[Task {self.request.id}] Job {job_id} is already running, skipping")
+            return {'success': False, 'error': 'Job already running'}
+
+        # Create executor and run
+        executor = JobExecutor(job)
+        result = executor.execute()
+
+        if result['success']:
+            logger.info(
+                f"[Task {self.request.id}] Job {job_id} completed successfully. "
+                f"Stats: {result.get('stats', {})}"
+            )
+        else:
+            logger.error(
+                f"[Task {self.request.id}] Job {job_id} failed. "
+                f"Error: {result.get('error', 'Unknown error')}"
+            )
+
+        return result
+
+    except ScheduledJob.DoesNotExist:
+        logger.error(f"[Task {self.request.id}] Job {job_id} not found or inactive")
+        return {'success': False, 'error': 'Job not found'}
+
+    except Exception as e:
+        logger.error(
+            f"[Task {self.request.id}] Unexpected error executing job {job_id}: {str(e)}",
+            exc_info=True
+        )
+        return {'success': False, 'error': str(e)}

@@ -27,6 +27,19 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # This will look for 'tasks.py' in each Django app
 app.autodiscover_tasks()
 
+# Configure Celery Beat schedule for periodic tasks
+from celery.schedules import crontab
+
+app.conf.beat_schedule = {
+    'check-scheduled-jobs-every-minute': {
+        'task': 'api.tasks.check_and_execute_scheduled_jobs',
+        'schedule': crontab(minute='*/1'),  # Run every minute
+        'options': {
+            'expires': 50,  # Task expires after 50 seconds (before next run)
+        }
+    },
+}
+
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):

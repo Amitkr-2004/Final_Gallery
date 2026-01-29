@@ -13,6 +13,19 @@ class Photo(models.Model):
     - One photo can belong to many persons (via PersonPhoto mapping)
     - Photos are associated with events via event_id (event-specific galleries)
     """
+    # Status constants
+    STATUS_PENDING = 'pending'
+    STATUS_PROCESSING = 'processing'
+    STATUS_COMPLETED = 'completed'
+    STATUS_FAILED = 'failed'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_PROCESSING, 'Processing'),
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
     id = models.AutoField(primary_key=True)
     file_path = models.CharField(max_length=500)
     image_hash = models.CharField(max_length=64, unique=True, db_index=True)
@@ -23,13 +36,8 @@ class Photo(models.Model):
     # Processing status and thumbnails (added to match database schema from migration 0005)
     status = models.CharField(
         max_length=20,
-        choices=[
-            ('pending', 'Pending'),
-            ('processing', 'Processing'),
-            ('completed', 'Completed'),
-            ('failed', 'Failed'),
-        ],
-        default='completed',
+        choices=STATUS_CHOICES,
+        default=STATUS_COMPLETED,
         db_index=True,
         help_text="Processing status: pending, processing, completed, failed"
     )
@@ -181,3 +189,92 @@ class DailyStatistics(models.Model):
 
     def __str__(self):
         return f"Stats for {self.date}: {self.photos_uploaded} photos, {self.faces_detected} faces"
+
+
+class ScheduledJob(models.Model):
+    """
+    Model to store scheduled job information for automated image processing.
+
+    Architecture Rules:
+    - Only ONE active job allowed at a time (enforced at API level)
+    - Jobs progress through states: pending → running → completed/failed
+    - Soft delete using is_active flag (preserves audit trail)
+    - Full error logging for traceability
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+
+    # Scheduling information
+    scheduled_time = models.DateTimeField(
+        db_index=True,
+        help_text="When this job should execute (timezone-aware)"
+    )
+    folder_path = models.CharField(
+        max_length=500,
+        help_text="Local folder path containing images (absolute path)"
+    )
+
+    # Execution tracking
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+        help_text="Current job status"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When job execution started"
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When job finished (success or failure)"
+    )
+
+    # Results tracking
+    event_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Created event ID (e.g., 'student-images-1234567890')"
+    )
+    images_processed = models.IntegerField(
+        default=0,
+        help_text="Number of images successfully processed"
+    )
+    faces_detected = models.IntegerField(
+        default=0,
+        help_text="Total faces detected across all images"
+    )
+    error_log = models.TextField(
+        blank=True,
+        help_text="Full error traceback if job failed"
+    )
+
+    # Soft delete flag
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="False = soft deleted (preserves history)"
+    )
+
+    class Meta:
+        ordering = ['-scheduled_time']
+        verbose_name = 'Scheduled Job'
+        verbose_name_plural = 'Scheduled Jobs'
+        indexes = [
+            models.Index(fields=['scheduled_time', 'status']),
+            models.Index(fields=['is_active', 'status']),
+        ]
+
+    def __str__(self):
+        return f"Job {self.id} - {self.status} - Scheduled: {self.scheduled_time}"

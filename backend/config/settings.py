@@ -169,3 +169,72 @@ FAISS_SIMILARITY_THRESHOLD = float(os.getenv('FAISS_SIMILARITY_THRESHOLD', '0.7'
 # Higher values = only clear, well-detected faces create collections
 # Recommended: 0.5-0.7 (lower = more lenient, higher = stricter)
 FACE_DETECTION_CONFIDENCE_THRESHOLD = float(os.getenv('FACE_DETECTION_CONFIDENCE_THRESHOLD', '0.5'))
+
+# Thumbnail Configuration
+THUMBNAIL_SIZES = {
+    'small': (200, 200),   # For collections page
+    'medium': (800, 800),  # For detail page
+}
+THUMBNAIL_QUALITY = 85
+THUMBNAIL_FORMAT = 'JPEG'
+
+# Time Scheduler Configuration
+# Maximum file size for images in MB
+MAX_IMAGE_SIZE_MB = int(os.getenv('MAX_IMAGE_SIZE_MB', '50'))
+
+# Whether to scan subdirectories recursively
+RECURSIVE_FOLDER_SCAN = os.getenv('RECURSIVE_FOLDER_SCAN', 'True') == 'True'
+
+# Allowed image file extensions
+ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']
+
+# ============================================================================
+# GOOGLE CLOUD STORAGE CONFIGURATION
+# ============================================================================
+
+# GCS bucket name for image storage
+# GCS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME', 'your-image-bucket')
+
+# GCS project ID
+# GCS_PROJECT_ID = os.getenv('GCS_PROJECT_ID', 'your-gcp-project-id')
+
+# Path to service account JSON credentials file
+# Set GOOGLE_APPLICATION_CREDENTIALS environment variable to the path
+# Example: /path/to/service-account-key.json
+
+# Maximum number of files in a batch upload request
+MAX_UPLOAD_BATCH_SIZE = int(os.getenv('MAX_UPLOAD_BATCH_SIZE', '100'))
+
+# ============================================================================
+# CELERY CONFIGURATION
+# ============================================================================
+
+# Celery broker configuration
+# Using filesystem broker for Windows development (no RabbitMQ/Redis required)
+CELERY_BROKER_URL = 'filesystem://'
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    'data_folder_in': os.path.join(BASE_DIR, 'celery_broker', 'out'),
+    'data_folder_out': os.path.join(BASE_DIR, 'celery_broker', 'out'),
+    'data_folder_processed': os.path.join(BASE_DIR, 'celery_broker', 'processed'),
+}
+
+# Result backend (optional - stores task results)
+# CELERY_RESULT_BACKEND = 'db+sqlite:///celery_results.sqlite'
+
+CELERY_BROKER_URL = "redis://127.0.0.1:6380/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6380/0"
+
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
+
+# Celery task settings
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Task execution settings
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per task

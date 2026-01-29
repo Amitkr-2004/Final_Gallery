@@ -9,6 +9,7 @@ import PersonPhotos from './components/gallery/PersonPhotos';
 import Upload from './components/gallery/Upload';
 import Stats from './components/gallery/Stats';
 import YourCollection from './components/gallery/YourCollection';
+import TimeScheduler from './components/scheduler/TimeScheduler';
 import PlaceholderPage from './components/common/PlaceholderPage';
 import Sidebar from './components/layout/Sidebar';
 import { useTheme } from './hooks/useTheme';
@@ -42,6 +43,9 @@ function App() {
 
             {/* Your Collection */}
             <Route path="/your-collection" element={<YourCollection />} />
+
+            {/* Time Scheduler */}
+            <Route path="/time-scheduler" element={<TimeScheduler />} />
 
             {/* Placeholder Routes */}
             <Route
