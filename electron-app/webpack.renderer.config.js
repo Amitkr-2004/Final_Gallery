@@ -93,6 +93,20 @@ module.exports = {
     },
     devMiddleware: {
       writeToDisk: true
+    },
+    client: {
+      webSocketURL: 'ws://localhost:9000/ws',
+      logging: 'info',
+      overlay: {
+        errors: true,
+        warnings: false
+      },
+      reconnect: 5
+    },
+    webSocketServer: 'ws',
+    allowedHosts: 'all',
+    headers: {
+      'Access-Control-Allow-Origin': '*'
     }
   },
 

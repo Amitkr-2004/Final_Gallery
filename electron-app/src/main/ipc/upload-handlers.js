@@ -9,6 +9,7 @@ const fs = require('fs').promises;
 const fssync = require('fs');
 const crypto = require('crypto');
 const { getDatabase } = require('../database/schema');
+const faceProcessing = require('../services/face-processing');
 
 /**
  * Calculate MD5 hash of a file
@@ -200,6 +201,17 @@ function registerUploadHandlers(ipcMain, getService) {
             });
 
             logger.info('File uploaded', { filename, destPath, hash: fileHash });
+
+            // Trigger face detection (async, non-blocking)
+            try {
+              await faceProcessing.processImage(destPath, filename, fileHash, stat.size);
+            } catch (faceError) {
+              logger.warn('Face processing failed for image', {
+                filename,
+                error: faceError.message
+              });
+              // Don't fail the upload if face detection fails
+            }
           }
         } catch (error) {
           results.failed++;

@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const { getConfigService } = require('./storage/config');
 const { setupLogger } = require('./utils/logger');
-const { initializeDatabase } = require('./database/schema');
+const { initializeDatabase, getDatabase } = require('./database/schema');
 const { registerIPCHandlers } = require('./ipc/handlers');
 
 // Keep a global reference to prevent garbage collection
@@ -287,17 +287,32 @@ async function initializeApp() {
     registerCustomProtocol();
 
     // 5. Initialize database
-    initializeDatabase(configService, logger);
+    const db = initializeDatabase(configService, logger);
     logger.info('✓ Database initialized');
 
-    // 6. Register IPC handlers
+    // 6. Initialize face detection services (mock version - no TensorFlow needed)
+    try {
+      const { initialize: initializeMockFaceDetection } = require('./services/mock-face-detection');
+      const { initialize: initializeFaceClustering } = require('./services/face-clustering');
+      const { initialize: initializeFaceProcessing } = require('./services/face-processing');
+
+      initializeMockFaceDetection(logger);
+      initializeFaceClustering(db, logger);
+      initializeFaceProcessing(db, logger);
+      logger.info('✓ Face detection services initialized (mock mode - no ML dependencies)');
+    } catch (error) {
+      logger.error('Face detection initialization failed', { error: error.message });
+      logger.info('Face detection will be disabled');
+    }
+
+    // 7. Register IPC handlers
     registerIPCHandlers(configService, logger);
     logger.info('✓ IPC handlers registered');
 
-    // 7. Create main window
+    // 8. Create main window
     createWindow();
 
-    // 8. Create system tray
+    // 9. Create system tray
     createTray();
 
     logger.info('=== Application Initialized Successfully ===');

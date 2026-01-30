@@ -44,7 +44,7 @@ function initializeDatabase(configService, logger) {
 function createTables(logger) {
   const db = getDatabase();
 
-  // Simple table for tracking uploaded files
+  // Main uploaded files table
   db.exec(`
     CREATE TABLE IF NOT EXISTS uploaded_files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,6 +54,67 @@ function createTables(logger) {
       file_size INTEGER NOT NULL,
       file_hash TEXT,
       UNIQUE(filepath)
+    );
+  `);
+
+  // Images table for face detection
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS images (
+      image_id TEXT PRIMARY KEY,
+      image_path TEXT NOT NULL UNIQUE,
+      original_filename TEXT NOT NULL,
+      file_hash TEXT,
+      upload_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+      file_size INTEGER,
+      width INTEGER,
+      height INTEGER,
+      total_faces_detected INTEGER DEFAULT 0,
+      processing_status TEXT DEFAULT 'pending',
+      processing_error TEXT,
+      processed_at DATETIME
+    );
+  `);
+
+  // Faces table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS faces (
+      face_id TEXT PRIMARY KEY,
+      image_id TEXT NOT NULL,
+      bounding_box TEXT NOT NULL,
+      embedding_vector TEXT NOT NULL,
+      confidence REAL,
+      landmarks TEXT,
+      quality_score REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (image_id) REFERENCES images(image_id) ON DELETE CASCADE
+    );
+  `);
+
+  // Face collections (persons/identities)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS face_collections (
+      collection_id TEXT PRIMARY KEY,
+      name TEXT,
+      representative_face_id TEXT,
+      total_faces INTEGER DEFAULT 0,
+      total_images INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (representative_face_id) REFERENCES faces(face_id) ON DELETE SET NULL
+    );
+  `);
+
+  // Face collection members (junction table)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS face_collection_members (
+      collection_id TEXT NOT NULL,
+      face_id TEXT NOT NULL,
+      similarity_score REAL,
+      is_representative INTEGER DEFAULT 0,
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (collection_id, face_id),
+      FOREIGN KEY (collection_id) REFERENCES face_collections(collection_id) ON DELETE CASCADE,
+      FOREIGN KEY (face_id) REFERENCES faces(face_id) ON DELETE CASCADE
     );
   `);
 
@@ -70,14 +131,149 @@ function createTables(logger) {
     logger.warn('Error checking/adding file_hash column', { error: error.message });
   }
 
-  // Create indexes
+  // Migration: Fix images table schema if it has wrong structure
+  try {
+    const imagesTableInfo = db.pragma('table_info(images)');
+    if (imagesTableInfo.length > 0) {
+      // Check if table has the old schema (id INTEGER PRIMARY KEY instead of image_id TEXT PRIMARY KEY)
+      const columnNames = imagesTableInfo.map(col => col.name);
+      const hasImageId = columnNames.includes('image_id');
+      const hasIdPrimaryKey = imagesTableInfo.some(col => col.name === 'id' && col.pk === 1);
+
+      if (!hasImageId && hasIdPrimaryKey) {
+        logger.info('Detected old images table schema, migrating to new schema...');
+
+        // Check if table is empty
+        const rowCount = db.prepare('SELECT COUNT(*) as count FROM images').get().count;
+
+        if (rowCount === 0) {
+          // Table is empty, safe to drop and recreate
+          logger.info('Images table is empty, recreating with correct schema');
+
+          // Drop related tables too since they depend on images
+          db.exec('DROP TABLE IF EXISTS face_collection_members');
+          db.exec('DROP TABLE IF EXISTS faces');
+          db.exec('DROP TABLE IF EXISTS face_collections');
+          db.exec('DROP TABLE IF EXISTS images');
+
+          logger.info('Old face detection tables dropped');
+
+          // Recreate with correct schema
+          db.exec(`
+            CREATE TABLE images (
+              image_id TEXT PRIMARY KEY,
+              image_path TEXT NOT NULL UNIQUE,
+              original_filename TEXT NOT NULL,
+              file_hash TEXT,
+              upload_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+              file_size INTEGER,
+              width INTEGER,
+              height INTEGER,
+              total_faces_detected INTEGER DEFAULT 0,
+              processing_status TEXT DEFAULT 'pending',
+              processing_error TEXT,
+              processed_at DATETIME
+            );
+          `);
+
+          db.exec(`
+            CREATE TABLE faces (
+              face_id TEXT PRIMARY KEY,
+              image_id TEXT NOT NULL,
+              bounding_box TEXT NOT NULL,
+              embedding_vector TEXT NOT NULL,
+              confidence REAL,
+              landmarks TEXT,
+              quality_score REAL,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (image_id) REFERENCES images(image_id) ON DELETE CASCADE
+            );
+          `);
+
+          db.exec(`
+            CREATE TABLE face_collections (
+              collection_id TEXT PRIMARY KEY,
+              name TEXT,
+              representative_face_id TEXT,
+              total_faces INTEGER DEFAULT 0,
+              total_images INTEGER DEFAULT 0,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (representative_face_id) REFERENCES faces(face_id) ON DELETE SET NULL
+            );
+          `);
+
+          db.exec(`
+            CREATE TABLE face_collection_members (
+              collection_id TEXT NOT NULL,
+              face_id TEXT NOT NULL,
+              similarity_score REAL,
+              is_representative INTEGER DEFAULT 0,
+              added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (collection_id, face_id),
+              FOREIGN KEY (collection_id) REFERENCES face_collections(collection_id) ON DELETE CASCADE,
+              FOREIGN KEY (face_id) REFERENCES faces(face_id) ON DELETE CASCADE
+            );
+          `);
+
+          logger.info('Face detection tables recreated with correct schema');
+        } else {
+          // Table has data, need to migrate
+          logger.info(`Images table has ${rowCount} rows, migrating data...`);
+          db.exec('ALTER TABLE images RENAME TO images_old');
+          logger.info('Renamed images to images_old');
+        }
+
+        // Recreate images table with correct schema (will happen below in normal table creation)
+      }
+    }
+  } catch (error) {
+    logger.warn('Error migrating images table schema', { error: error.message, stack: error.stack });
+  }
+
+  // Create indexes for uploaded_files
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_upload_date ON uploaded_files(upload_date);
     CREATE INDEX IF NOT EXISTS idx_filename ON uploaded_files(filename);
     CREATE INDEX IF NOT EXISTS idx_file_hash ON uploaded_files(file_hash);
   `);
 
+  // Create indexes for images
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_images_upload_time ON images(upload_time);
+    CREATE INDEX IF NOT EXISTS idx_images_processing_status ON images(processing_status);
+    CREATE INDEX IF NOT EXISTS idx_images_file_hash ON images(file_hash);
+  `);
+
+  // Create indexes for faces
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_faces_image_id ON faces(image_id);
+    CREATE INDEX IF NOT EXISTS idx_faces_created_at ON faces(created_at);
+  `);
+
+  // Create indexes for face_collections
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_collections_created_at ON face_collections(created_at);
+    CREATE INDEX IF NOT EXISTS idx_collections_name ON face_collections(name);
+  `);
+
+  // Create indexes for face_collection_members
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_members_collection_id ON face_collection_members(collection_id);
+    CREATE INDEX IF NOT EXISTS idx_members_face_id ON face_collection_members(face_id);
+    CREATE INDEX IF NOT EXISTS idx_members_similarity ON face_collection_members(similarity_score);
+  `);
+
   logger.info('Database tables created');
+
+  // Log all tables for verification
+  const tables = db.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' ORDER BY name
+  `).all();
+  logger.info('📊 Database tables:', {
+    tables: tables.map(t => t.name),
+    count: tables.length
+  });
 }
 
 /**

@@ -35,6 +35,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openFolder: (path) => ipcRenderer.invoke('core:system:open-folder', path)
   },
 
+  // Face & Collection APIs
+  face: {
+    getCollections: () => ipcRenderer.invoke('core:face:get-collections'),
+    getCollectionFaces: (collectionId) => ipcRenderer.invoke('core:face:get-collection-faces', collectionId),
+    getPersonImages: (collectionId) => ipcRenderer.invoke('core:face:get-person-images', collectionId),
+    renameCollection: (collectionId, newName) => ipcRenderer.invoke('core:face:rename-collection', collectionId, newName),
+    deleteCollection: (collectionId) => ipcRenderer.invoke('core:face:delete-collection', collectionId),
+    getStats: () => ipcRenderer.invoke('core:face:get-stats'),
+    batchProcess: () => ipcRenderer.invoke('core:face:batch-process')
+  },
+
   // Navigation API (for tray menu)
   onNavigate: (callback) => {
     ipcRenderer.on('navigate-to', (event, route) => callback(route));
