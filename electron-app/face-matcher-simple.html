@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Matcher</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        button { padding: 15px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px; }
+        button:hover { background: #5568d3; }
+        .result { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px; }
+        .match { padding: 10px; margin: 10px 0; background: white; border-left: 4px solid #667eea; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Face Collection Matcher</h1>
+
+        <button onclick="selectAndMatch()">Select Image & Find Matches</button>
+        <button onclick="testWithSample()">Test with Sample Image</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function selectAndMatch() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                document.getElementById('result').innerHTML = '<p>Scanning...</p>';
+
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const save = await window.electronAPI.scanner.saveTempImage(ev.target.result);
+                        const result = await window.electronAPI.scanner.scanAndMatch(save.path, {
+                            threshold: 0.6,
+                            limit: 10,
+                            searchMode: 'local'
+                        });
+                        await window.electronAPI.scanner.cleanupTemp();
+                        displayResults(result);
+                    } catch (error) {
+                        document.getElementById('result').innerHTML = '<p style="color:red">Error: ' + error.message + '</p>';
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        async function testWithSample() {
+            document.getElementById('result').innerHTML = '<p>Scanning sample image...</p>';
+
+            try {
+                const result = await window.electronAPI.scanner.scanAndMatch(
+                    'D:\\\\Gallery_VSCode\\\\electron-app\\\\app-data\\\\uploads\\\\2026-01-30_1769775265114_1.jpeg',
+                    { threshold: 0.6, limit: 10, searchMode: 'local' }
+                );
+                displayResults(result);
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<p style="color:red">Error: ' + error.message + '</p>';
+            }
+        }
+
+        function displayResults(result) {
+            const div = document.getElementById('result');
+
+            if (!result.success) {
+                div.innerHTML = '<p style="color:red">Error: ' + (result.error || 'Scan failed') + '</p>';
+                return;
+            }
+
+            let html = '<div class="result">';
+            html += '<h3>Results</h3>';
+            html += '<p><strong>Face Confidence:</strong> ' + (result.scanned_face.confidence * 100).toFixed(1) + '%</p>';
+            html += '<p><strong>Collections Scanned:</strong> ' + result.stats.total_collections_scanned + '</p>';
+            html += '<p><strong>Matches Found:</strong> ' + result.matches.length + '</p>';
+
+            if (result.matches.length > 0) {
+                html += '<h4>Top Matches:</h4>';
+                result.matches.forEach((m, i) => {
+                    const similarity = (m.match.similarity * 100).toFixed(1);
+                    html += '<div class="match">';
+                    html += '<strong>' + (i + 1) + '. ' + m.collection_name + '</strong><br>';
+                    html += 'Similarity: ' + similarity + '% | ';
+                    html += 'Faces: ' + m.total_faces + '<br>';
+                    html += 'Distance: ' + m.match.distance.toFixed(4);
+                    html += '</div>';
+                });
+            } else {
+                html += '<p>No matches found. Try adjusting the threshold.</p>';
+            }
+
+            html += '</div>';
+            div.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

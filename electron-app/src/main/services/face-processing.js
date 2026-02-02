@@ -6,9 +6,10 @@
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const sizeOf = require('image-size');
-// Use mock face detection (works without TensorFlow)
-const { detectFaces } = require('./mock-face-detection');
+// Use REAL face detection with face-api.js for proper matching
+const { detectFaces } = require('./face-detection');
 const { assignFaceToCollection } = require('./face-clustering');
+const gcsUpload = require('./gcs-upload');
 
 let db = null;
 let logger = null;
@@ -202,6 +203,16 @@ async function processImageFaces(imageId, imagePath) {
       image_id: imageId,
       total_faces: detectedFaces.length
     });
+
+    // Auto-sync image to GCS (don't wait, run in background)
+    if (gcsUpload && gcsUpload.isReady()) {
+      gcsUpload.syncImage(imageId).catch(err => {
+        logger.warn('Failed to auto-sync image to GCS', {
+          image_id: imageId,
+          error: err.message
+        });
+      });
+    }
   } catch (error) {
     logger.error('Face processing failed', {
       image_id: imageId,
@@ -280,9 +291,39 @@ function getStatistics() {
   };
 }
 
+/**
+ * Batch process all pending images
+ */
+async function batchProcessImages() {
+  const pendingImages = db.prepare(`
+    SELECT image_id, image_path, original_filename, file_hash, file_size
+    FROM images
+    WHERE processing_status = 'pending' OR processing_status IS NULL
+    ORDER BY upload_time ASC
+  `).all();
+
+  logger.info('Batch processing images', { count: pendingImages.length });
+
+  for (const image of pendingImages) {
+    try {
+      // For batch processing, directly process faces without re-inserting the image
+      await processImageFaces(image.image_id, image.image_path);
+    } catch (error) {
+      logger.error('Failed to process image in batch', {
+        image_id: image.image_id,
+        error: error.message
+      });
+    }
+  }
+
+  logger.info('Batch processing complete', { count: pendingImages.length });
+  return { success: true, processed: pendingImages.length };
+}
+
 module.exports = {
   initialize,
   processImage,
+  batchProcessImages,
   getProcessingStatus,
   getAllImagesWithFaces,
   getStatistics

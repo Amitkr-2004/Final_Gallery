@@ -144,11 +144,12 @@ function registerGalleryHandlers(ipcMain, getService) {
   ipcMain.handle('core:gallery:delete-file', async (event, fileId) => {
     const db = getDatabase();
     const logger = getService('logger');
+    const gcsUpload = getService('gcsUpload');
 
     try {
       // Get file info from database
       const file = db.prepare(`
-        SELECT id, filename, filepath
+        SELECT id, filename, filepath, file_hash
         FROM uploaded_files
         WHERE id = ?
       `).get(fileId);
@@ -158,6 +159,28 @@ function registerGalleryHandlers(ipcMain, getService) {
           success: false,
           error: 'File not found in database'
         };
+      }
+
+      // Find corresponding image in images table (by filepath)
+      const image = db.prepare(`
+        SELECT image_id, gcs_path
+        FROM images
+        WHERE image_path = ?
+      `).get(file.filepath);
+
+      // Delete from GCS if image exists and has GCS path
+      if (image && image.gcs_path && gcsUpload && gcsUpload.isReady()) {
+        try {
+          // Delete image from GCS
+          const gcsPath = image.gcs_path.replace(`gs://${process.env.GCS_BUCKET_NAME}/`, '');
+          await gcsUpload.deleteImageFromGCS(gcsPath);
+          logger.info('Image deleted from GCS', { gcsPath });
+        } catch (error) {
+          logger.warn('Failed to delete image from GCS', {
+            gcsPath: image.gcs_path,
+            error: error.message
+          });
+        }
       }
 
       // Delete file from filesystem
@@ -171,7 +194,13 @@ function registerGalleryHandlers(ipcMain, getService) {
         });
       }
 
-      // Delete from database
+      // Delete from images table (will CASCADE delete faces)
+      if (image) {
+        db.prepare('DELETE FROM images WHERE image_id = ?').run(image.image_id);
+        logger.info('Image deleted from database', { imageId: image.image_id });
+      }
+
+      // Delete from uploaded_files table
       db.prepare('DELETE FROM uploaded_files WHERE id = ?').run(fileId);
       logger.info('File deleted from database', { fileId, filename: file.filename });
 

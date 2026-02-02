@@ -6,10 +6,12 @@
 const { v4: uuidv4 } = require('uuid');
 // Use mock face detection (works without TensorFlow)
 const { cosineSimilarity } = require('./mock-face-detection');
+const gcsUpload = require('./gcs-upload');
 
 // Similarity threshold for face matching (0.0 - 1.0)
 // Higher = stricter matching, Lower = more lenient
-const SIMILARITY_THRESHOLD = 0.6;
+// For real face embeddings with cosine similarity, use 0.92 for balanced matching
+const SIMILARITY_THRESHOLD = 0.92;
 
 let db = null;
 let logger = null;
@@ -139,6 +141,14 @@ async function createNewCollection(face, imageId) {
       name: collectionName
     });
 
+    // Auto-sync to GCS (don't wait, run in background)
+    syncCollectionToGCS(collectionId).catch(err => {
+      logger.warn('Failed to auto-sync collection to GCS', {
+        collection_id: collectionId,
+        error: err.message
+      });
+    });
+
     return {
       collection_id: collectionId,
       name: collectionName
@@ -190,6 +200,14 @@ async function addFaceToCollection(face, collectionId, similarityScore, imageId)
     await updateRepresentativeFaceIfBetter(collectionId, face);
 
     db.prepare('COMMIT').run();
+
+    // Auto-sync updated collection to GCS (don't wait, run in background)
+    syncCollectionToGCS(collectionId).catch(err => {
+      logger.warn('Failed to auto-sync updated collection to GCS', {
+        collection_id: collectionId,
+        error: err.message
+      });
+    });
   } catch (error) {
     db.prepare('ROLLBACK').run();
     throw error;
@@ -327,9 +345,80 @@ async function deleteCollection(collectionId) {
     db.prepare('COMMIT').run();
 
     logger.info('Deleted collection', { collection_id: collectionId });
+
+    // Auto-delete from GCS (don't wait, run in background)
+    deleteCollectionFromGCS(collectionId).catch(err => {
+      logger.warn('Failed to auto-delete collection from GCS', {
+        collection_id: collectionId,
+        error: err.message
+      });
+    });
   } catch (error) {
     db.prepare('ROLLBACK').run();
     throw error;
+  }
+}
+
+/**
+ * Auto-sync collection to GCS (background task)
+ * @param {string} collectionId - Collection to sync
+ */
+async function syncCollectionToGCS(collectionId) {
+  try {
+    if (!gcsUpload.isReady()) {
+      logger.debug('GCS not ready, skipping auto-sync', { collectionId });
+      return;
+    }
+
+    logger.info('Auto-syncing collection to GCS', { collectionId });
+    const result = await gcsUpload.uploadCollectionMetadata(collectionId);
+
+    if (result.success) {
+      logger.info('Collection auto-synced to GCS', {
+        collectionId,
+        gcsPath: result.gcsPath
+      });
+    } else {
+      logger.warn('Collection auto-sync failed', {
+        collectionId,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    logger.error('Error in auto-sync', {
+      collectionId,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Auto-delete collection from GCS (background task)
+ * @param {string} collectionId - Collection to delete
+ */
+async function deleteCollectionFromGCS(collectionId) {
+  try {
+    if (!gcsUpload.isReady()) {
+      logger.debug('GCS not ready, skipping auto-delete', { collectionId });
+      return;
+    }
+
+    logger.info('Auto-deleting collection from GCS', { collectionId });
+    const result = await gcsUpload.deleteCollectionFromGCS(collectionId);
+
+    if (result.success) {
+      logger.info('Collection auto-deleted from GCS', { collectionId });
+    } else {
+      logger.warn('Collection auto-delete failed', {
+        collectionId,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    logger.error('Error in auto-delete', {
+      collectionId,
+      error: error.message
+    });
   }
 }
 

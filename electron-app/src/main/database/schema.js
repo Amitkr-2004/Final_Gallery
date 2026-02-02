@@ -71,7 +71,10 @@ function createTables(logger) {
       total_faces_detected INTEGER DEFAULT 0,
       processing_status TEXT DEFAULT 'pending',
       processing_error TEXT,
-      processed_at DATETIME
+      processed_at DATETIME,
+      sync_status TEXT DEFAULT 'pending',
+      gcs_path TEXT,
+      synced_at DATETIME
     );
   `);
 
@@ -86,6 +89,9 @@ function createTables(logger) {
       landmarks TEXT,
       quality_score REAL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      sync_status TEXT DEFAULT 'pending',
+      metadata_gcs_path TEXT,
+      synced_at DATETIME,
       FOREIGN KEY (image_id) REFERENCES images(image_id) ON DELETE CASCADE
     );
   `);
@@ -172,7 +178,10 @@ function createTables(logger) {
               total_faces_detected INTEGER DEFAULT 0,
               processing_status TEXT DEFAULT 'pending',
               processing_error TEXT,
-              processed_at DATETIME
+              processed_at DATETIME,
+              sync_status TEXT DEFAULT 'pending',
+              gcs_path TEXT,
+              synced_at DATETIME
             );
           `);
 
@@ -186,6 +195,9 @@ function createTables(logger) {
               landmarks TEXT,
               quality_score REAL,
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              sync_status TEXT DEFAULT 'pending',
+              metadata_gcs_path TEXT,
+              synced_at DATETIME,
               FOREIGN KEY (image_id) REFERENCES images(image_id) ON DELETE CASCADE
             );
           `);
@@ -231,6 +243,48 @@ function createTables(logger) {
     logger.warn('Error migrating images table schema', { error: error.message, stack: error.stack });
   }
 
+  // Migration: Add GCP sync tracking columns to images table
+  try {
+    const imagesTableInfo = db.pragma('table_info(images)');
+    const columnNames = imagesTableInfo.map(col => col.name);
+
+    const syncColumns = [
+      { name: 'sync_status', type: 'TEXT DEFAULT \'pending\'' },
+      { name: 'gcs_path', type: 'TEXT' },
+      { name: 'synced_at', type: 'DATETIME' }
+    ];
+
+    for (const col of syncColumns) {
+      if (!columnNames.includes(col.name)) {
+        db.exec(`ALTER TABLE images ADD COLUMN ${col.name} ${col.type}`);
+        logger.info(`Added ${col.name} column to images table`);
+      }
+    }
+  } catch (error) {
+    logger.warn('Error adding sync columns to images table', { error: error.message });
+  }
+
+  // Migration: Add GCP sync tracking columns to faces table
+  try {
+    const facesTableInfo = db.pragma('table_info(faces)');
+    const columnNames = facesTableInfo.map(col => col.name);
+
+    const syncColumns = [
+      { name: 'sync_status', type: 'TEXT DEFAULT \'pending\'' },
+      { name: 'metadata_gcs_path', type: 'TEXT' },
+      { name: 'synced_at', type: 'DATETIME' }
+    ];
+
+    for (const col of syncColumns) {
+      if (!columnNames.includes(col.name)) {
+        db.exec(`ALTER TABLE faces ADD COLUMN ${col.name} ${col.type}`);
+        logger.info(`Added ${col.name} column to faces table`);
+      }
+    }
+  } catch (error) {
+    logger.warn('Error adding sync columns to faces table', { error: error.message });
+  }
+
   // Create indexes for uploaded_files
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_upload_date ON uploaded_files(upload_date);
@@ -243,12 +297,14 @@ function createTables(logger) {
     CREATE INDEX IF NOT EXISTS idx_images_upload_time ON images(upload_time);
     CREATE INDEX IF NOT EXISTS idx_images_processing_status ON images(processing_status);
     CREATE INDEX IF NOT EXISTS idx_images_file_hash ON images(file_hash);
+    CREATE INDEX IF NOT EXISTS idx_images_sync_status ON images(sync_status);
   `);
 
   // Create indexes for faces
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_faces_image_id ON faces(image_id);
     CREATE INDEX IF NOT EXISTS idx_faces_created_at ON faces(created_at);
+    CREATE INDEX IF NOT EXISTS idx_faces_sync_status ON faces(sync_status);
   `);
 
   // Create indexes for face_collections

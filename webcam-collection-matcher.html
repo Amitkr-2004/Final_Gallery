@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Face Matcher - Find Collections</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        video, canvas {
+            width: 100%;
+            display: block;
+            border-radius: 10px;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .status.ready {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status.processing {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        .matches-section {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 400px;
+        }
+
+        .matches-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .match-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .match-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .similarity-badge {
+            background: #48bb78;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .match-details {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .no-matches {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .no-matches-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-box {
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            color: #742a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #a0aec0;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Face Collection Matcher</h1>
+        <p class="subtitle">Scan your face and find matching collections</p>
+
+        <div id="status" class="status ready">⚠️ This requires Electron app to be running</div>
+
+        <div class="two-column">
+            <div>
+                <div class="video-container">
+                    <video id="video" autoplay playsinline></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+
+                <div class="controls">
+                    <button id="startBtn" class="btn-primary">Start Camera</button>
+                    <button id="captureBtn" class="btn-success" disabled>Scan & Match</button>
+                    <button id="stopBtn" class="btn-secondary" disabled>Stop</button>
+                </div>
+            </div>
+
+            <div class="matches-section" id="matchesSection">
+                <div class="matches-title">
+                    <span>🔍</span>
+                    <span>Matching Collections</span>
+                </div>
+                <div class="no-matches">
+                    <div class="no-matches-icon">📸</div>
+                    <div>Capture your face to find matches</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="instructions" style="background: #edf2f7; padding: 20px; border-radius: 10px; margin-top: 20px;">
+            <h3 style="color: #2d3748; margin-bottom: 10px;">📖 How to Use:</h3>
+            <ol style="color: #4a5568; line-height: 1.8; margin-left: 20px;">
+                <li>Make sure your <strong>Electron app is running</strong> (the main gallery app)</li>
+                <li>Open <strong>DevTools</strong> in the Electron app (F12)</li>
+                <li>Keep DevTools open in the background</li>
+                <li>Come back to this page and click <strong>"Start Camera"</strong></li>
+                <li>Click <strong>"Scan & Match"</strong> to find your collections</li>
+            </ol>
+            <p style="color: #718096; margin-top: 15px; font-size: 14px;">
+                💡 <strong>Note:</strong> This page uses the Electron app's APIs to search collections.
+                The simple API server doesn't have database access for collection matching.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDiv = document.getElementById('status');
+        const matchesSection = document.getElementById('matchesSection');
+
+        let stream = null;
+
+        // Check if running in Electron
+        const isElectron = window.electronAPI !== undefined;
+
+        if (!isElectron) {
+            statusDiv.textContent = '⚠️ Open this page in the Electron app for collection matching';
+            statusDiv.style.background = '#fed7d7';
+            statusDiv.style.color = '#742a2a';
+        }
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                video.srcObject = stream;
+
+                startBtn.disabled = true;
+                captureBtn.disabled = false;
+                stopBtn.disabled = false;
+
+                statusDiv.textContent = '✅ Camera active - Position your face';
+                statusDiv.className = 'status ready';
+            } catch (error) {
+                showError('Camera access denied: ' + error.message);
+            }
+        });
+
+        captureBtn.addEventListener('click', async () => {
+            if (!isElectron) {
+                showError('This feature requires the Electron app. Please open this page within the Electron app.');
+                return;
+            }
+
+            try {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0);
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        showError('Failed to capture image');
+                        return;
+                    }
+
+                    statusDiv.textContent = '🔍 Scanning and matching...';
+                    statusDiv.className = 'status processing';
+                    captureBtn.disabled = true;
+
+                    matchesSection.innerHTML = `
+                        <div class="matches-title">
+                            <span>🔍</span>
+                            <span>Searching Collections...</span>
+                        </div>
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <div>Analyzing face and searching collections...</div>
+                        </div>
+                    `;
+
+                    try {
+                        // Save image temporarily
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                            const dataUrl = reader.result;
+
+                            // Save temp image
+                            const saveResult = await window.electronAPI.scanner.saveTempImage(dataUrl, 'webcam-scan.jpg');
+
+                            if (!saveResult.success) {
+                                showError('Failed to save image: ' + saveResult.error);
+                                return;
+                            }
+
+                            // Scan and match
+                            const result = await window.electronAPI.scanner.scanAndMatch(
+                                saveResult.path,
+                                { threshold: 0.6, limit: 10, searchMode: 'local' }
+                            );
+
+                            // Cleanup
+                            await window.electronAPI.scanner.cleanupTemp();
+
+                            if (result.success) {
+                                displayMatches(result);
+                            } else {
+                                showError(result.error || 'No face detected');
+                            }
+
+                            captureBtn.disabled = false;
+                            statusDiv.textContent = '✅ Scan complete - Ready for next scan';
+                            statusDiv.className = 'status ready';
+                        };
+                        reader.readAsDataURL(blob);
+
+                    } catch (error) {
+                        showError('Matching error: ' + error.message);
+                        captureBtn.disabled = false;
+                        statusDiv.textContent = '❌ Error occurred';
+                    }
+                }, 'image/jpeg', 0.95);
+
+            } catch (error) {
+                showError(error.message);
+                captureBtn.disabled = false;
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
+
+                startBtn.disabled = false;
+                captureBtn.disabled = true;
+                stopBtn.disabled = true;
+
+                statusDiv.textContent = 'Camera stopped';
+                statusDiv.className = 'status';
+            }
+        });
+
+        function displayMatches(result) {
+            const { matches, stats, scanned_face } = result;
+
+            let html = `
+                <div class="matches-title">
+                    <span>🎯</span>
+                    <span>Found ${matches.length} Match${matches.length !== 1 ? 'es' : ''}</span>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Confidence</div>
+                        <div class="stat-value">${(scanned_face.confidence * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Collections</div>
+                        <div class="stat-value">${stats.total_collections_scanned}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Matches</div>
+                        <div class="stat-value">${matches.length}</div>
+                    </div>
+                </div>
+            `;
+
+            if (matches.length === 0) {
+                html += `
+                    <div class="no-matches">
+                        <div class="no-matches-icon">😕</div>
+                        <div><strong>No matches found</strong></div>
+                        <div style="font-size: 14px; margin-top: 10px;">
+                            This face doesn't match any known collections.<br>
+                            Try adjusting the threshold or ensure collections are uploaded.
+                        </div>
+                    </div>
+                `;
+            } else {
+                matches.forEach((match, index) => {
+                    const similarity = (match.match.similarity * 100).toFixed(1);
+                    const bgColor = similarity > 80 ? '#48bb78' : similarity > 60 ? '#f6ad55' : '#fc8181';
+
+                    html += `
+                        <div class="match-card">
+                            <div class="match-header">
+                                <div class="match-name">${index + 1}. ${match.collection_name}</div>
+                                <div class="similarity-badge" style="background: ${bgColor}">
+                                    ${similarity}% Match
+                                </div>
+                            </div>
+                            <div class="match-details">
+                                📸 ${match.total_faces} face${match.total_faces !== 1 ? 's' : ''} in collection<br>
+                                🆔 Collection ID: ${match.collection_id.substring(0, 8)}...<br>
+                                📊 Distance: ${match.match.distance.toFixed(4)}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            matchesSection.innerHTML = html;
+        }
+
+        function showError(message) {
+            matchesSection.innerHTML = `
+                <div class="matches-title">
+                    <span>❌</span>
+                    <span>Error</span>
+                </div>
+                <div class="error-box">
+                    ${message}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -9,6 +9,9 @@ const { registerGalleryHandlers } = require('./gallery-handlers');
 const { registerConfigHandlers } = require('./config-handlers');
 const { registerSystemHandlers } = require('./system-handlers');
 const { registerFaceHandlers } = require('./face-handlers');
+const { registerGCPHandlers } = require('./gcp-handlers');
+const { registerGCSUploadHandlers } = require('./gcs-upload-handlers');
+const { registerFaceScannerHandlers } = require('./face-scanner-handlers');
 
 // Service instances
 let services = {
@@ -53,6 +56,9 @@ function registerIPCHandlers(configService, logger) {
   registerConfigHandlers(ipcMain, getService);
   registerSystemHandlers(ipcMain, getService);
   registerFaceHandlers(ipcMain, getService);
+  registerGCPHandlers(ipcMain, getService);
+  registerGCSUploadHandlers(ipcMain, getService);
+  registerFaceScannerHandlers(ipcMain, getService);
 
   logger.info('✓ All IPC handlers registered');
 }

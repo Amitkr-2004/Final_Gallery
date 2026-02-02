@@ -71,3 +71,4 @@ electron-builder.yml
 credentials/
 service-account-*.json
 gcp-key-*.json
+gcp-service-account.json

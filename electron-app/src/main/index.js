@@ -3,6 +3,9 @@
  * Simple local image gallery with upload functionality
  */
 
+// Load environment variables from .env file
+require('dotenv').config();
+
 const { app, BrowserWindow, protocol, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -290,24 +293,98 @@ async function initializeApp() {
     const db = initializeDatabase(configService, logger);
     logger.info('✓ Database initialized');
 
-    // 6. Initialize face detection services (mock version - no TensorFlow needed)
+    // 6. Initialize face detection services (REAL ML models - face-api.js)
     try {
-      const { initialize: initializeMockFaceDetection } = require('./services/mock-face-detection');
+      const { initialize: initializeFaceDetection } = require('./services/face-detection');
       const { initialize: initializeFaceClustering } = require('./services/face-clustering');
       const { initialize: initializeFaceProcessing } = require('./services/face-processing');
+      const { initialize: initializeGCPDataPrep } = require('./services/gcp-data-preparation');
 
-      initializeMockFaceDetection(logger);
+      // Initialize real face detection with ML models
+      const faceDetectionLoaded = await initializeFaceDetection(logger);
+
+      if (faceDetectionLoaded) {
+        logger.info('✓ Real face detection initialized with ML models');
+      } else {
+        logger.warn('Face detection models not loaded - run: node scripts/download-face-models.js');
+      }
+
       initializeFaceClustering(db, logger);
       initializeFaceProcessing(db, logger);
-      logger.info('✓ Face detection services initialized (mock mode - no ML dependencies)');
+      initializeGCPDataPrep(db, logger, configService);
+      logger.info('✓ Face detection services initialized');
     } catch (error) {
       logger.error('Face detection initialization failed', { error: error.message });
       logger.info('Face detection will be disabled');
     }
 
+    // 6b. Initialize GCS upload service (optional - only if credentials are configured)
+    try {
+      const { initialize: initializeGCSUpload } = require('./services/gcs-upload');
+      const result = await initializeGCSUpload(db, logger);
+
+      if (result.success) {
+        logger.info('✓ GCS upload service initialized');
+      } else {
+        logger.info('GCS upload service disabled (no credentials configured)');
+      }
+    } catch (error) {
+      logger.warn('GCS upload initialization skipped', { error: error.message });
+      logger.info('GCS upload will be disabled - configure gcp-service-account.json to enable');
+    }
+
+    // 6c. Initialize face scanner service
+    try {
+      const { initialize: initializeFaceScanner } = require('./services/face-scanner');
+      initializeFaceScanner(logger);
+      logger.info('✓ Face scanner service initialized');
+    } catch (error) {
+      logger.warn('Face scanner initialization skipped', { error: error.message });
+      logger.info('Face scanner will be disabled');
+    }
+
     // 7. Register IPC handlers
     registerIPCHandlers(configService, logger);
     logger.info('✓ IPC handlers registered');
+
+    // 8. Auto-process pending images on startup
+    setTimeout(async () => {
+      try {
+        const faceProcessing = require('./services/face-processing');
+        const pendingImages = db.prepare(`
+          SELECT COUNT(*) as count FROM images
+          WHERE processing_status = 'pending' OR processing_status IS NULL
+        `).get();
+
+        if (pendingImages && pendingImages.count > 0) {
+          logger.info('🔄 Auto-processing pending images...', { count: pendingImages.count });
+
+          const result = await faceProcessing.batchProcessImages();
+          logger.info('✓ Auto-processing complete', result);
+
+          // Auto-sync to GCS after processing
+          setTimeout(async () => {
+            try {
+              const gcsUpload = require('./services/gcs-upload');
+              if (gcsUpload.isReady()) {
+                logger.info('🔄 Auto-syncing to GCS...');
+                const syncResult = await gcsUpload.syncAllCollections();
+                logger.info('✓ Collections auto-synced', syncResult.stats);
+
+                const batchSyncResult = await gcsUpload.batchSync();
+                logger.info('✓ Images auto-synced', batchSyncResult.stats);
+              }
+            } catch (syncError) {
+              logger.error('Auto-sync failed', { error: syncError.message, stack: syncError.stack });
+            }
+          }, 2000); // Wait 2 seconds after processing
+        } else {
+          logger.info('No pending images to process');
+        }
+      } catch (error) {
+        logger.error('Auto-processing failed', { error: error.message, stack: error.stack });
+      }
+    }, 5000); // Wait 5 seconds after startup
 
     // 8. Create main window
     createWindow();

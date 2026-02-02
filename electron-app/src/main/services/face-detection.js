@@ -3,11 +3,19 @@
  * Handles face detection, recognition, and embedding generation
  */
 
-const faceapi = require('@vladmandic/face-api');
 const canvas = require('canvas');
 const fs = require('fs').promises;
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+
+// Load face-api (includes TensorFlow.js internally)
+const faceapi = require('face-api.js');
+
+// Access TensorFlow from face-api's internal instance
+const tf = faceapi.tf;
+
+// Set TF backend to CPU (pure JavaScript, no native bindings)
+tf.setBackend('cpu');
 
 // Setup canvas for face-api
 const { Canvas, Image, ImageData } = canvas;
@@ -27,27 +35,34 @@ async function initializeFaceAPI(loggerInstance) {
   logger = loggerInstance;
 
   try {
-    const modelPath = path.join(__dirname, '../../models');
+    const modelPath = path.join(__dirname, '../../../models/face-api');
 
-    // Create models directory if it doesn't exist
-    await fs.mkdir(modelPath, { recursive: true });
+    // Check if models directory exists
+    try {
+      await fs.access(modelPath);
+    } catch (err) {
+      throw new Error(`Models directory not found: ${modelPath}. Run: node scripts/download-face-models.js`);
+    }
 
-    logger.info('Loading face detection models...');
+    logger.info('Loading face detection models...', { path: modelPath });
 
-    // Load models
-    await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromDisk(modelPath),
-      faceapi.nets.faceLandmark68Net.loadFromDisk(modelPath),
-      faceapi.nets.faceRecognitionNet.loadFromDisk(modelPath)
-    ]);
+    // Load models sequentially for better error handling
+    await faceapi.nets.ssdMobilenetv1.loadFromDisk(modelPath);
+    logger.info('✓ SSD MobileNet V1 loaded (face detection)');
+
+    await faceapi.nets.faceLandmark68Net.loadFromDisk(modelPath);
+    logger.info('✓ Face Landmark 68 loaded');
+
+    await faceapi.nets.faceRecognitionNet.loadFromDisk(modelPath);
+    logger.info('✓ Face Recognition Net loaded (embeddings)');
 
     modelsLoaded = true;
-    logger.info('✓ Face detection models loaded successfully');
+    logger.info('✓ Real face detection initialized with ML models');
     return true;
   } catch (error) {
     logger.error('Failed to load face detection models', { error: error.message });
-    logger.info('Models should be placed in: electron-app/models/');
-    logger.info('Download from: https://github.com/vladmandic/face-api/tree/master/model');
+    logger.warn('Run: node scripts/download-face-models.js to download models');
+    logger.info('Face detection will be disabled until models are available');
     return false;
   }
 }
@@ -181,7 +196,13 @@ function euclideanDistance(vec1, vec2) {
   return Math.sqrt(sum);
 }
 
+/**
+ * Alias for consistency with other services
+ */
+const initialize = initializeFaceAPI;
+
 module.exports = {
+  initialize,
   initializeFaceAPI,
   detectFaces,
   cosineSimilarity,

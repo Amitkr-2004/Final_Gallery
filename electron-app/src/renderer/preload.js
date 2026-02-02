@@ -46,6 +46,39 @@ contextBridge.exposeInMainWorld('electronAPI', {
     batchProcess: () => ipcRenderer.invoke('core:face:batch-process')
   },
 
+  // GCP Sync APIs
+  gcp: {
+    getPendingSync: () => ipcRenderer.invoke('core:gcp:get-pending-sync'),
+    prepareUpload: () => ipcRenderer.invoke('core:gcp:prepare-upload'),
+    exportMetadata: () => ipcRenderer.invoke('core:gcp:export-metadata'),
+    markForSync: (imageIds, faceIds) => ipcRenderer.invoke('core:gcp:mark-for-sync', { imageIds, faceIds })
+  },
+
+  // GCS Upload APIs
+  gcs: {
+    isReady: () => ipcRenderer.invoke('core:gcs:is-ready'),
+    syncImage: (imageId) => ipcRenderer.invoke('core:gcs:sync-image', imageId),
+    batchSync: (options) => ipcRenderer.invoke('core:gcs:batch-sync', options || {}),
+    getSyncStats: () => ipcRenderer.invoke('core:gcs:get-sync-stats'),
+    retryFailed: () => ipcRenderer.invoke('core:gcs:retry-failed'),
+
+    // Collection APIs
+    uploadCollection: (collectionId) => ipcRenderer.invoke('core:gcs:upload-collection', collectionId),
+    syncAllCollections: () => ipcRenderer.invoke('core:gcs:sync-all-collections'),
+    fetchCollection: (collectionId) => ipcRenderer.invoke('core:gcs:fetch-collection', collectionId),
+    listCollections: () => ipcRenderer.invoke('core:gcs:list-collections')
+  },
+
+  // Face Scanner APIs
+  scanner: {
+    scanFace: (imagePath) => ipcRenderer.invoke('core:scanner:scan-face', imagePath),
+    searchCollections: (embedding, threshold, limit) => ipcRenderer.invoke('core:scanner:search-collections', { embedding, threshold, limit }),
+    searchCollectionsLocal: (embedding, threshold, limit) => ipcRenderer.invoke('core:scanner:search-collections-local', { embedding, threshold, limit }),
+    scanAndMatch: (imagePath, options) => ipcRenderer.invoke('core:scanner:scan-and-match', { imagePath, options }),
+    saveTempImage: (dataUrl, filename) => ipcRenderer.invoke('core:scanner:save-temp-image', { dataUrl, filename }),
+    cleanupTemp: () => ipcRenderer.invoke('core:scanner:cleanup-temp')
+  },
+
   // Navigation API (for tray menu)
   onNavigate: (callback) => {
     ipcRenderer.on('navigate-to', (event, route) => callback(route));

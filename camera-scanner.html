@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Camera Face Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .camera-section, .results-section {
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 15px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+            border-radius: 10px;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .face-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            height: 350px;
+            border: 4px solid rgba(102, 126, 234, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        .face-guide::before {
+            content: 'Position your face in the circle';
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            white-space: nowrap;
+        }
+
+        .face-guide.active {
+            border-color: rgba(72, 187, 120, 0.9);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.05);
+                opacity: 0.8;
+            }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            text-align: center;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .status.ready {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status.scanning {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .match-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 5px solid #667eea;
+        }
+
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .match-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .similarity-badge {
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: white;
+        }
+
+        .match-details {
+            color: #4a5568;
+            line-height: 1.8;
+            font-size: 0.95em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #a0aec0;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .no-matches {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+
+        .no-matches-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .images-gallery {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .gallery-image {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+
+        .gallery-image:hover {
+            transform: scale(1.05);
+        }
+
+        .gallery-image img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-loading {
+            width: 100%;
+            height: 200px;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #a0aec0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .api-status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .api-status.connected {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .api-status.disconnected {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📹 Live Camera Face Scanner</h1>
+        <p class="subtitle">Scan your face instantly and find matching collections</p>
+
+        <div id="apiStatus" class="api-status">Checking API connection...</div>
+
+        <div class="grid">
+            <div class="camera-section">
+                <div class="section-title">
+                    <span>📷</span>
+                    <span>Camera</span>
+                </div>
+
+                <div id="status" class="status ready">Ready to start camera</div>
+
+                <div class="video-container">
+                    <video id="video" autoplay playsinline></video>
+                    <div id="faceGuide" class="face-guide"></div>
+                    <canvas id="canvas"></canvas>
+                </div>
+
+                <div class="controls">
+                    <button id="startBtn" class="btn-primary">Start Camera</button>
+                    <button id="scanBtn" class="btn-success" disabled>Scan Face</button>
+                    <button id="stopBtn" class="btn-secondary" disabled>Stop Camera</button>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="section-title">
+                    <span>🎯</span>
+                    <span>Results</span>
+                </div>
+                <div id="results">
+                    <div class="no-matches">
+                        <div class="no-matches-icon">👤</div>
+                        <div>Start camera and scan to see results</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const scanBtn = document.getElementById('scanBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        const apiStatusDiv = document.getElementById('apiStatus');
+        const faceGuide = document.getElementById('faceGuide');
+
+        const API_URL = 'http://localhost:3001';
+        let stream = null;
+
+        // Check API status
+        async function checkAPI() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    apiStatusDiv.textContent = '✅ API Connected - Ready to scan';
+                    apiStatusDiv.className = 'api-status connected';
+                    return true;
+                }
+            } catch (error) {
+                apiStatusDiv.textContent = '❌ API Server Not Running - Start the enhanced API server first';
+                apiStatusDiv.className = 'api-status disconnected';
+                return false;
+            }
+        }
+
+        // Start camera
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    }
+                });
+
+                video.srcObject = stream;
+
+                startBtn.disabled = true;
+                scanBtn.disabled = false;
+                stopBtn.disabled = false;
+
+                // Activate face guide (turn green)
+                faceGuide.classList.add('active');
+
+                statusDiv.textContent = '📸 Camera active - Position your face in the circle';
+                statusDiv.className = 'status ready';
+            } catch (error) {
+                statusDiv.textContent = '❌ Camera access denied';
+                statusDiv.className = 'status error';
+                alert('Camera access denied. Please allow camera access and try again.');
+            }
+        });
+
+        // Scan face
+        scanBtn.addEventListener('click', async () => {
+            const apiOk = await checkAPI();
+            if (!apiOk) {
+                alert('API server not running. Start it with: node api-server-enhanced.js');
+                return;
+            }
+
+            try {
+                scanBtn.disabled = true;
+                statusDiv.textContent = '🔍 Scanning and matching...';
+                statusDiv.className = 'status scanning';
+
+                resultsDiv.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <div>Detecting face and searching collections...</div>
+                    </div>
+                `;
+
+                // Capture image
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0);
+
+                // Convert to blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+
+                // Upload to API
+                const formData = new FormData();
+                formData.append('image', blob, 'camera-capture.jpg');
+                formData.append('threshold', '0.65');  // 65% similarity - strict but realistic
+                formData.append('limit', '10');
+
+                const response = await fetch(`${API_URL}/api/scanner/match`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayResults(result);
+                    statusDiv.textContent = '✅ Scan complete - Ready for next scan';
+                    statusDiv.className = 'status ready';
+                } else {
+                    statusDiv.textContent = '❌ ' + (result.error || 'Scan failed');
+                    statusDiv.className = 'status error';
+                    resultsDiv.innerHTML = `
+                        <div class="no-matches">
+                            <div class="no-matches-icon">❌</div>
+                            <div><strong>Error</strong></div>
+                            <div style="margin-top: 10px;">${result.error || 'Scan failed'}</div>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                statusDiv.textContent = '❌ Error: ' + error.message;
+                statusDiv.className = 'status error';
+                resultsDiv.innerHTML = `
+                    <div class="no-matches">
+                        <div class="no-matches-icon">❌</div>
+                        <div><strong>Connection Error</strong></div>
+                        <div style="margin-top: 10px;">Make sure the API server is running on port 3001</div>
+                    </div>
+                `;
+            } finally {
+                scanBtn.disabled = false;
+            }
+        });
+
+        // Stop camera
+        stopBtn.addEventListener('click', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
+
+                startBtn.disabled = false;
+                scanBtn.disabled = true;
+                stopBtn.disabled = true;
+
+                // Deactivate face guide (turn back to blue)
+                faceGuide.classList.remove('active');
+
+                statusDiv.textContent = 'Camera stopped';
+                statusDiv.className = 'status';
+            }
+        });
+
+        function displayResults(result) {
+            const { scanned_face, matches, stats } = result;
+            const confidence = (scanned_face.confidence * 100).toFixed(1);
+
+            // ONLY use the TOP match (highest similarity), not all matches
+            const topMatch = matches.length > 0 ? matches[0] : null;
+
+            let uniqueImages = [];
+            let imageCount = 0;
+            let bestSimilarity = 0;
+            let matchedCollections = [];
+
+            if (topMatch) {
+                // Only show images from the best matching collection
+                uniqueImages = topMatch.image_ids || [];
+                imageCount = uniqueImages.length;
+                bestSimilarity = topMatch.match.similarity * 100;
+                matchedCollections = [{
+                    name: topMatch.collection_name,
+                    similarity: bestSimilarity.toFixed(1)
+                }];
+            }
+
+            let html = `
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Face Confidence</div>
+                        <div class="stat-value">${confidence}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Best Match</div>
+                        <div class="stat-value">${bestSimilarity.toFixed(1)}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Unique Images</div>
+                        <div class="stat-value">${imageCount}</div>
+                    </div>
+                </div>
+            `;
+
+            if (matches.length === 0) {
+                html += `
+                    <div class="no-matches">
+                        <div class="no-matches-icon">🤔</div>
+                        <div><strong>No Matches Found</strong></div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">
+                            Your face doesn't match any collections.<br>
+                            Try adjusting threshold or ensure you're in the database.
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show unified result with all unique images
+                let bgColor = '#48bb78';
+                if (bestSimilarity < 70) bgColor = '#fc8181';
+                else if (bestSimilarity < 80) bgColor = '#f6ad55';
+
+                html += `
+                    <div class="match-card">
+                        <div class="match-header">
+                            <div class="match-name">Your Photos</div>
+                            <div class="similarity-badge" style="background: ${bgColor}">
+                                ${bestSimilarity.toFixed(1)}%
+                            </div>
+                        </div>
+                        <div class="match-details">
+                            🎯 Best matching collection: <strong>${matchedCollections[0].name}</strong><br>
+                            🖼️ <strong>${imageCount}</strong> images where you appear<br>
+                            📊 Match confidence: ${matchedCollections[0].similarity}%<br>
+                        </div>
+                `;
+
+                if (uniqueImages.length > 0) {
+                    html += `
+                        <div style="margin-top: 15px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                            <strong style="color: #2d3748;">🖼️ Images where you appear (${imageCount} total):</strong>
+                            <div class="images-gallery" style="margin-top: 12px;">
+                              ${uniqueImages.map((id, i) => `
+                                <div class="gallery-image" onclick="window.open('${API_URL}/api/images/${id}', '_blank')">
+                                  <img src="${API_URL}/api/images/${id}"
+                                       alt="Photo ${i + 1}"
+                                       onerror="this.parentElement.innerHTML='<div class=\\'image-loading\\'>Loading...</div>'"
+                                       loading="lazy"
+                                       title="Click to view full size">
+                                </div>
+                              `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += '</div>';
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Check API on load
+        checkAPI();
+    </script>
+</body>
+</html>

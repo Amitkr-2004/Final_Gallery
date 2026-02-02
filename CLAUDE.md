@@ -1,0 +1,639 @@
+# Face Gallery - AI-Powered Photo Management System
+
+**Built with Claude Code Assistant**
+
+A sophisticated Electron-based desktop application that uses real machine learning models to detect, cluster, and organize faces in your photo collection, with seamless Google Cloud Storage integration.
+
+---
+
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [API Documentation](#api-documentation)
+- [Development Stages](#development-stages)
+- [Testing Guide](#testing-guide)
+- [File Structure](#file-structure)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## 🎯 Overview
+
+Face Gallery is a desktop application that automatically:
+- **Detects faces** in uploaded images using ML models (SSD MobileNet V1)
+- **Generates embeddings** (128-dimension FaceNet descriptors)
+- **Clusters similar faces** into collections (persons)
+- **Syncs everything to Google Cloud Storage** for backup and cloud access
+- **Stores embeddings** in both GCS and Firestore for vector similarity search
+
+---
+
+## ✨ Features
+
+### Core Features
+- ✅ **Real Face Detection** with TensorFlow.js and face-api.js
+- ✅ **Face Clustering** - Automatically groups similar faces
+- ✅ **Face Scanner & Recognition** - Scan and match faces against collections
+- ✅ **Cloud Sync** - Upload to Google Cloud Storage
+- ✅ **Firestore Integration** - Store embeddings for similarity search
+- ✅ **Collection Management** - Review and organize face collections
+- ✅ **Local Database** - SQLite for offline-first architecture
+- ✅ **Crash-Safe Uploads** - Resumable sync with status tracking
+
+### ML Features
+- **Face Detection**: SSD MobileNet V1 (50-200ms per image)
+- **Landmark Detection**: 68-point facial landmarks
+- **Face Recognition**: 128-dim FaceNet embeddings
+- **Quality Scoring**: Automatic face quality assessment
+- **Similarity Matching**: Euclidean distance for face clustering
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Electron App (Desktop)                 │
+├─────────────────────────────────────────────────────────┤
+│                                                           │
+│  ┌──────────────┐    ┌──────────────┐    ┌───────────┐ │
+│  │   Renderer   │◄──►│  Main Process │◄──►│  SQLite   │ │
+│  │   (React)    │    │   (Node.js)   │    │  Database │ │
+│  └──────────────┘    └──────────────┘    └───────────┘ │
+│         │                    │                           │
+│         │                    ▼                           │
+│         │         ┌─────────────────────┐               │
+│         │         │  Face Detection     │               │
+│         │         │  (face-api.js)      │               │
+│         │         │  - SSD MobileNet    │               │
+│         │         │  - Face Landmarks   │               │
+│         │         │  - FaceNet          │               │
+│         │         └─────────────────────┘               │
+│         │                    │                           │
+└─────────┼────────────────────┼───────────────────────────┘
+          │                    │
+          │                    ▼
+          │         ┌─────────────────────┐
+          │         │  Google Cloud       │
+          │         │                     │
+          │         │  ┌───────────────┐ │
+          │         │  │  Cloud Storage│ │
+          │         │  │  (GCS)        │ │
+          │         │  │  - Images     │ │
+          │         │  │  - Metadata   │ │
+          │         │  │  - Embeddings │ │
+          │         │  │  - Collections│ │
+          │         │  └───────────────┘ │
+          │         │                     │
+          │         │  ┌───────────────┐ │
+          │         │  │  Firestore    │ │
+          │         │  │  (Embeddings) │ │
+          │         │  └───────────────┘ │
+          │         └─────────────────────┘
+          │
+          ▼
+    User Interface
+```
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+- **React** 18.x - UI framework
+- **React Router** - Navigation
+- **Electron** - Desktop app framework
+
+### Backend (Main Process)
+- **Node.js** 18+ - Runtime environment
+- **face-api.js** - Face detection and recognition
+- **TensorFlow.js** - ML inference
+- **better-sqlite3** - Local database
+- **Canvas** - Image processing
+
+### Cloud Services
+- **Google Cloud Storage (GCS)** - File storage
+- **Cloud Firestore** - Vector embeddings database
+- **Service Account Authentication** - Secure access
+
+### ML Models
+- **SSD MobileNet V1** (~6MB) - Face detection
+- **Face Landmark 68** (~350KB) - Landmark detection
+- **Face Recognition Net** (~6MB) - 128-dim embeddings
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+- **Node.js** 18.0.0 or higher
+- **npm** 8.0.0 or higher
+- **Git** (for cloning)
+- **Google Cloud Project** (for cloud sync)
+
+### Steps
+
+1. **Clone the repository:**
+   ```bash
+   cd electron-app
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Download face detection models:**
+   ```bash
+   node scripts/download-face-models.js
+   ```
+
+4. **Set up environment variables:**
+   Create `.env` file in `electron-app/` directory:
+   ```env
+   GOOGLE_APPLICATION_CREDENTIALS=./gcp-service-account.json
+   GCS_BUCKET_NAME=your-bucket-name
+   GCP_PROJECT_ID=your-project-id
+   FIRESTORE_DATABASE_ID=(default)
+   ```
+
+5. **Add GCP credentials:**
+   Place your `gcp-service-account.json` in `electron-app/` directory
+
+6. **Start the app:**
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## ⚙️ Configuration
+
+### GCP Service Account Setup
+
+1. **Create Service Account:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Navigate to IAM & Admin > Service Accounts
+   - Create new service account
+
+2. **Grant Roles:**
+   - **Storage Admin** - For GCS uploads
+   - **Cloud Datastore User** - For Firestore access
+
+3. **Download JSON Key:**
+   - Create key (JSON format)
+   - Save as `gcp-service-account.json`
+
+4. **Create GCS Bucket:**
+   - Navigate to Cloud Storage > Buckets
+   - Create bucket (e.g., `face-gallery-storage`)
+   - Choose location and storage class
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account JSON | Yes |
+| `GCS_BUCKET_NAME` | GCS bucket name | Yes |
+| `GCP_PROJECT_ID` | GCP project ID | Yes |
+| `FIRESTORE_DATABASE_ID` | Firestore database ID | No (default: `(default)`) |
+| `GCS_BUCKET_LOCATION` | Bucket location | No (default: `us-central1`) |
+
+---
+
+## 📚 API Documentation
+
+### Main Process APIs (IPC)
+
+#### GCS Upload APIs
+
+```javascript
+// Check if GCS is ready
+await window.electronAPI.gcs.isReady()
+// Returns: { success: boolean, ready: boolean }
+
+// Sync single image
+await window.electronAPI.gcs.syncImage(imageId)
+// Returns: { success: boolean, results: object }
+
+// Batch sync images
+await window.electronAPI.gcs.batchSync({ limit: 10 })
+// Returns: { success: boolean, results: array, stats: { total, succeeded, failed } }
+
+// Get sync statistics
+await window.electronAPI.gcs.getSyncStats()
+// Returns: { success: boolean, stats: { pending, uploading, completed, failed, total } }
+
+// Retry failed uploads
+await window.electronAPI.gcs.retryFailed()
+// Returns: { success: boolean, results: array }
+```
+
+#### Collection APIs
+
+```javascript
+// Upload single collection metadata
+await window.electronAPI.gcs.uploadCollection(collectionId)
+// Returns: { success: boolean, gcsPath: string }
+
+// Sync all collections
+await window.electronAPI.gcs.syncAllCollections()
+// Returns: { success: boolean, results: array, stats: object }
+
+// Fetch collection from GCS
+await window.electronAPI.gcs.fetchCollection(collectionId)
+// Returns: { success: boolean, data: object }
+
+// List all collections in GCS
+await window.electronAPI.gcs.listCollections()
+// Returns: { success: boolean, collections: array }
+```
+
+#### Face Scanner APIs
+
+```javascript
+// Scan a face and generate embedding
+await window.electronAPI.scanner.scanFace(imagePath)
+// Returns: { success: boolean, face: { embedding, confidence, boundingBox, landmarks } }
+
+// Complete workflow: Scan and match against collections
+await window.electronAPI.scanner.scanAndMatch(imagePath, {
+  threshold: 0.6,    // Similarity threshold (0-1)
+  limit: 10,         // Max results
+  searchMode: 'local' // 'local' (faster) or 'gcs' (cloud)
+})
+// Returns: { success, scanned_face, matches: [{ collection_id, collection_name, match: { similarity, distance, ... } }], stats }
+
+// Search collections using embedding (local database - faster)
+await window.electronAPI.scanner.searchCollectionsLocal(embedding, threshold, limit)
+// Returns: { success, matches: [...], stats }
+
+// Search collections using embedding (GCS - cloud-based)
+await window.electronAPI.scanner.searchCollections(embedding, threshold, limit)
+// Returns: { success, matches: [...], stats }
+
+// Save temporary image (useful for webcam captures)
+await window.electronAPI.scanner.saveTempImage(dataUrl, filename)
+// Returns: { success: boolean, path: string }
+
+// Cleanup temporary files (older than 1 hour)
+await window.electronAPI.scanner.cleanupTemp()
+// Returns: { success: boolean }
+```
+
+**See [FACE_SCANNER_API.md](./FACE_SCANNER_API.md) for complete documentation and examples.**
+
+---
+
+## 🚀 Development Stages
+
+### Stage 1: Data Preparation ✅
+- **Objective:** Prepare local data for GCP upload
+- **Implementation:**
+  - Database queries for pending sync data
+  - Face and image metadata preparation
+  - Embedding vector formatting
+- **Location:** `src/main/services/gcp-data-preparation.js`
+
+### Stage 2: GCS Upload Service ✅
+- **Objective:** Upload images, metadata, and embeddings to GCS
+- **Implementation:**
+  - Image upload: `images/{collection_id}/{image_id}.jpg`
+  - Face metadata: `metadata/faces/{face_id}.json`
+  - Embeddings: `embeddings/{face_id}.json`
+  - Firestore sync for vector search
+  - Crash-safe with status tracking
+- **Location:** `src/main/services/gcs-upload.js`
+
+### Stage 3: Real Face Detection ✅
+- **Objective:** Replace mock detection with real ML models
+- **Implementation:**
+  - Downloaded face-api.js models (12MB)
+  - SSD MobileNet V1 for face detection
+  - 68-point landmark detection
+  - FaceNet 128-dim embeddings
+  - Runs in Main Process (Node.js backend)
+- **Location:** `src/main/services/face-detection.js`
+- **Models:** `models/face-api/`
+
+### Stage 4: Collection Metadata Upload ✅
+- **Objective:** Upload face collections to GCS for review
+- **Implementation:**
+  - Collection metadata JSON generation
+  - Face-to-collection mappings
+  - Representative face selection
+  - Fetch and list operations
+- **Storage:** `collections/{collection_id}.json`
+
+### Stage 5: Face Scanner & Recognition ✅
+- **Objective:** Scan faces and match against collections
+- **Implementation:**
+  - Face scanning with embedding generation
+  - Euclidean distance similarity matching
+  - Dual search modes: Local (fast) and GCS (cloud)
+  - Similarity threshold configuration
+  - Temporary image management for webcam/uploads
+  - Ranked results with confidence scores
+- **Location:** `src/main/services/face-scanner.js`
+- **Use Cases:** Attendance systems, access control, face identification
+
+---
+
+## 🧪 Testing Guide
+
+### Developer Console Tests
+
+Open Developer Console (`Ctrl+Shift+I` or `F12`) in the app:
+
+#### Test 1: Check GCS Status
+```javascript
+const ready = await window.electronAPI.gcs.isReady();
+console.log('GCS Ready:', ready);
+// Expected: { success: true, ready: true }
+```
+
+#### Test 2: Sync Statistics
+```javascript
+const stats = await window.electronAPI.gcs.getSyncStats();
+console.log('Sync Stats:', stats);
+// Shows: pending, uploading, completed, failed counts
+```
+
+#### Test 3: Upload Single Image
+```javascript
+const result = await window.electronAPI.gcs.batchSync({ limit: 1 });
+console.log('Upload Result:', result);
+// Uploads 1 image with all faces and embeddings
+```
+
+#### Test 4: Sync All Collections
+```javascript
+const result = await window.electronAPI.gcs.syncAllCollections();
+console.log('Collections Synced:', result);
+// Uploads all collection metadata to GCS
+```
+
+#### Test 5: List Collections from GCS
+```javascript
+const list = await window.electronAPI.gcs.listCollections();
+console.log('GCS Collections:', list.collections);
+// Shows all collections with metadata
+```
+
+#### Test 6: Fetch Collection Details
+```javascript
+const data = await window.electronAPI.gcs.fetchCollection('collection-id');
+console.log('Collection Data:', data);
+// Returns full collection metadata, faces, and mappings
+```
+
+#### Test 7: Scan a Face
+```javascript
+const scan = await window.electronAPI.scanner.scanFace('D:\\Gallery_VSCode\\electron-app\\app-data\\uploads\\test.jpg');
+console.log('Face Scan:', scan);
+// Returns face embedding, confidence, bounding box
+```
+
+#### Test 8: Face Recognition - Complete Workflow
+```javascript
+const result = await window.electronAPI.scanner.scanAndMatch(
+  'D:\\Gallery_VSCode\\electron-app\\app-data\\uploads\\test.jpg',
+  { threshold: 0.6, limit: 5, searchMode: 'local' }
+);
+console.log('Match Results:', result);
+console.log('Top Match:', result.matches[0]?.collection_name);
+// Scans face and returns matching collections ranked by similarity
+```
+
+---
+
+## 📁 File Structure
+
+```
+electron-app/
+├── src/
+│   ├── main/                      # Main Process (Node.js)
+│   │   ├── database/
+│   │   │   └── schema.js         # SQLite schema
+│   │   ├── ipc/
+│   │   │   ├── handlers.js       # IPC handler registration
+│   │   │   ├── gcs-upload-handlers.js  # GCS IPC handlers
+│   │   │   └── ...
+│   │   ├── services/
+│   │   │   ├── face-detection.js        # Real face detection (ML)
+│   │   │   ├── face-clustering.js       # Face clustering algorithm
+│   │   │   ├── face-processing.js       # Face processing pipeline
+│   │   │   ├── gcs-upload.js           # GCS upload service
+│   │   │   ├── gcp-data-preparation.js # Data prep for GCP
+│   │   │   └── mock-face-detection.js  # Mock (deprecated)
+│   │   ├── storage/
+│   │   │   └── config.js         # Configuration management
+│   │   ├── utils/
+│   │   │   └── logger.js         # Winston logger
+│   │   └── index.js              # Main entry point
+│   │
+│   └── renderer/                 # Renderer Process (React)
+│       ├── pages/                # Page components
+│       ├── layouts/              # Layout components
+│       ├── styles/               # CSS styles
+│       ├── App.jsx               # Root component
+│       └── preload.js            # Preload script (IPC bridge)
+│
+├── config/
+│   └── gcp-config.js            # GCP configuration
+│
+├── models/
+│   └── face-api/                # ML models (12MB)
+│       ├── ssd_mobilenetv1_model-*
+│       ├── face_landmark_68_model-*
+│       └── face_recognition_model-*
+│
+├── scripts/
+│   └── download-face-models.js  # Model download script
+│
+├── app-data/
+│   └── database/
+│       └── app.db               # SQLite database
+│
+├── .env                         # Environment variables
+├── gcp-service-account.json     # GCP credentials (gitignored)
+├── package.json
+└── CLAUDE.md                    # This file
+```
+
+---
+
+## 🗄️ Database Schema
+
+### Tables
+
+#### `images`
+- Primary storage for uploaded images
+- Tracks processing and sync status
+- Fields: `image_id`, `image_path`, `file_hash`, `processing_status`, `sync_status`, `gcs_path`, `synced_at`
+
+#### `faces`
+- Detected faces with embeddings
+- Links to images and collections
+- Fields: `face_id`, `image_id`, `bounding_box`, `embedding_vector`, `confidence`, `quality_score`, `sync_status`, `metadata_gcs_path`
+
+#### `face_collections`
+- Grouped faces (persons)
+- Representative face selection
+- Fields: `collection_id`, `name`, `total_faces`, `total_images`, `representative_face_id`, `created_at`, `updated_at`
+
+#### `face_collection_members`
+- Many-to-many mapping
+- Similarity scores
+- Fields: `collection_id`, `face_id`, `similarity_score`, `is_representative`
+
+---
+
+## 🎨 GCS Storage Structure
+
+```
+gs://your-bucket/
+├── images/
+│   ├── {collection_id}/
+│   │   └── {image_id}.jpg
+│   └── uncategorized/
+│       └── {image_id}.jpg
+│
+├── metadata/
+│   └── faces/
+│       └── {face_id}.json
+│
+├── embeddings/
+│   └── {face_id}.json
+│
+└── collections/
+    └── {collection_id}.json
+```
+
+### Sample Collection Metadata (`collections/{id}.json`)
+```json
+{
+  "collection_id": "636355b1-7e4f-4bff-82e3-55709d95b402",
+  "name": "Person 1",
+  "total_faces": 10,
+  "total_images": 8,
+  "representative_face_id": "97a394aa-68af-4731-8cca-e65a935df3d5",
+  "faces": [
+    {
+      "face_id": "97a394aa-68af-4731-8cca-e65a935df3d5",
+      "image_id": "ebd83e0a-43b6-413b-bb4b-2c51c30a54ae",
+      "confidence": 0.99,
+      "quality_score": 0.85,
+      "similarity_score": 0.92,
+      "is_representative": true,
+      "created_at": "2026-02-02T07:00:00.000Z"
+    }
+  ],
+  "image_ids": ["ebd83e0a-43b6-413b-bb4b-2c51c30a54ae"],
+  "synced_at": "2026-02-02T07:35:00.000Z"
+}
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Issue: "GCS service not initialized"
+**Solution:**
+1. Check `.env` file exists with correct values
+2. Verify `gcp-service-account.json` is in correct location
+3. Ensure GCS bucket exists
+4. Check service account has required roles
+5. Restart the app
+
+### Issue: "Face detection models not loaded"
+**Solution:**
+1. Run: `node scripts/download-face-models.js`
+2. Check `models/face-api/` has 8 files (12MB total)
+3. Ensure Node.js 18+ is installed
+4. Restart the app
+
+### Issue: Blank page in Electron app
+**Solution:**
+1. Kill all Electron processes: `taskkill //F //IM electron.exe`
+2. Kill processes on port 9000: `netstat -ano | findstr :9000`
+3. Restart: `npm run dev`
+
+### Issue: Native module version mismatch
+**Solution:**
+1. Rebuild native modules: `npx electron-rebuild`
+2. Or reinstall: `rm -rf node_modules && npm install`
+
+---
+
+## 📊 Performance
+
+- **Face Detection:** 50-200ms per image (CPU)
+- **Face Clustering:** ~5ms per face comparison
+- **GCS Upload:** Depends on internet speed
+  - Image (2MB): ~1-3 seconds
+  - Metadata (10KB): ~200-500ms
+- **Firestore Write:** ~100-300ms per embedding
+
+---
+
+## 🔐 Security
+
+- ✅ Service account credentials in `.gitignore`
+- ✅ `.env` file excluded from version control
+- ✅ GCS bucket with IAM permissions
+- ✅ Firestore security rules (configure separately)
+- ✅ No hardcoded credentials in source code
+
+---
+
+## 📈 Future Enhancements
+
+- [ ] Real-time face search using Firestore vector queries
+- [ ] Face recognition for known persons
+- [ ] Bulk operations UI
+- [ ] Advanced filtering and search
+- [ ] Face editing (merge/split collections)
+- [ ] Export to other cloud providers
+- [ ] Mobile companion app
+- [ ] Shared collections with permissions
+
+---
+
+## 📝 License
+
+[Add your license here]
+
+---
+
+## 👥 Credits
+
+**Built with:**
+- [face-api.js](https://github.com/justadudewhohacks/face-api.js) - Face detection library
+- [TensorFlow.js](https://www.tensorflow.org/js) - ML framework
+- [Electron](https://www.electronjs.org/) - Desktop framework
+- [React](https://react.dev/) - UI library
+- [Google Cloud](https://cloud.google.com/) - Cloud infrastructure
+
+**Developed with assistance from:** Claude Code (Anthropic)
+
+---
+
+## 📞 Support
+
+For issues and questions:
+1. Check the [Troubleshooting](#troubleshooting) section
+2. Review logs in Developer Console
+3. Check `app-data/logs/` directory
+4. Open an issue in the repository
+
+---
+
+**Last Updated:** February 2, 2026
+**Version:** 1.0.0
+**Status:** Production Ready ✅

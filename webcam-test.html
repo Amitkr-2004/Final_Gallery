@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Face Scanner Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        video, canvas {
+            width: 100%;
+            display: block;
+            border-radius: 10px;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-box.show {
+            display: block;
+        }
+
+        .result-box.success {
+            border-left: 4px solid #48bb78;
+        }
+
+        .result-box.error {
+            border-left: 4px solid #f56565;
+        }
+
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .result-content {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .status.ready {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status.processing {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Webcam Face Scanner</h1>
+        <p class="subtitle">Test face detection with your camera</p>
+
+        <div id="status" class="status ready">Ready to start</div>
+
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn-primary">Start Camera</button>
+            <button id="captureBtn" class="btn-success" disabled>Capture & Scan</button>
+            <button id="stopBtn" class="btn-secondary" disabled>Stop Camera</button>
+        </div>
+
+        <div id="result" class="result-box"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
+
+        let stream = null;
+        const API_URL = 'http://localhost:3000';
+
+        // Start camera
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                video.srcObject = stream;
+
+                startBtn.disabled = true;
+                captureBtn.disabled = false;
+                stopBtn.disabled = false;
+
+                statusDiv.textContent = 'Camera active - Position your face in frame';
+                statusDiv.className = 'status ready';
+            } catch (error) {
+                alert('Error accessing camera: ' + error.message);
+                console.error('Camera error:', error);
+            }
+        });
+
+        // Capture and scan
+        captureBtn.addEventListener('click', async () => {
+            try {
+                // Set canvas size to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw video frame to canvas
+                ctx.drawImage(video, 0, 0);
+
+                // Convert to blob
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        showResult('Error capturing image', 'error');
+                        return;
+                    }
+
+                    // Show loading
+                    statusDiv.textContent = 'Scanning face...';
+                    statusDiv.className = 'status processing';
+                    captureBtn.disabled = true;
+                    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Detecting face...</div>';
+                    resultDiv.className = 'result-box show';
+
+                    // Upload to API
+                    const formData = new FormData();
+                    formData.append('image', blob, 'webcam-capture.jpg');
+
+                    try {
+                        const response = await fetch(`${API_URL}/api/scanner/upload`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            showSuccess(result.face);
+                        } else {
+                            showResult(result.error || 'Scan failed', 'error');
+                        }
+                    } catch (error) {
+                        showResult('API Error: ' + error.message, 'error');
+                    } finally {
+                        captureBtn.disabled = false;
+                        statusDiv.textContent = 'Ready to capture again';
+                        statusDiv.className = 'status ready';
+                    }
+                }, 'image/jpeg', 0.95);
+
+            } catch (error) {
+                showResult('Error: ' + error.message, 'error');
+                captureBtn.disabled = false;
+            }
+        });
+
+        // Stop camera
+        stopBtn.addEventListener('click', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
+
+                startBtn.disabled = false;
+                captureBtn.disabled = true;
+                stopBtn.disabled = true;
+
+                statusDiv.textContent = 'Camera stopped';
+                statusDiv.className = 'status';
+                resultDiv.className = 'result-box';
+            }
+        });
+
+        function showSuccess(face) {
+            const confidence = (face.confidence * 100).toFixed(2);
+            const embeddingPreview = face.embedding.slice(0, 5).map(n => n.toFixed(3)).join(', ');
+
+            resultDiv.className = 'result-box show success';
+            resultDiv.innerHTML = `
+                <div class="result-title">✅ Face Detected Successfully!</div>
+                <div class="result-content">
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Confidence</div>
+                            <div class="stat-value">${confidence}%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Embedding Size</div>
+                            <div class="stat-value">${face.embedding.length}D</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Face Width</div>
+                            <div class="stat-value">${Math.round(face.boundingBox.width)}px</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Face Height</div>
+                            <div class="stat-value">${Math.round(face.boundingBox.height)}px</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <strong>Face Location:</strong><br>
+                        X: ${Math.round(face.boundingBox.x)},
+                        Y: ${Math.round(face.boundingBox.y)}
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Embedding Preview:</strong><br>
+                        [${embeddingPreview}, ...]
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Landmarks Detected:</strong> ${face.landmarks.length} points
+                    </div>
+                </div>
+            `;
+        }
+
+        function showResult(message, type = 'error') {
+            resultDiv.className = `result-box show ${type}`;
+            resultDiv.innerHTML = `
+                <div class="result-title">${type === 'error' ? '❌' : 'ℹ️'} ${type === 'error' ? 'Error' : 'Info'}</div>
+                <div class="result-content">${message}</div>
+            `;
+        }
+
+        // Check API status on load
+        fetch(`${API_URL}/health`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    console.log('✅ API server is ready');
+                }
+            })
+            .catch(err => {
+                statusDiv.textContent = '⚠️ Warning: API server not responding';
+                statusDiv.style.background = '#fed7d7';
+                statusDiv.style.color = '#742a2a';
+            });
+    </script>
+</body>
+</html>

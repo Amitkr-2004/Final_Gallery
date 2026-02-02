@@ -26,11 +26,18 @@
     "format": "prettier --write \"src/**/*.{js,jsx,json,css}\""
   },
   "dependencies": {
-    "@vladmandic/face-api": "^1.7.15",
+    "@google-cloud/firestore": "^8.2.0",
+    "@google-cloud/storage": "^7.18.0",
+    "@tensorflow/tfjs": "^4.22.0",
     "better-sqlite3": "^9.2.2",
     "canvas": "^3.2.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
     "electron-store": "^8.1.0",
+    "express": "^5.2.1",
+    "face-api.js": "^0.22.2",
     "image-size": "^1.2.1",
+    "multer": "^2.0.2",
     "uuid": "^9.0.1",
     "winston": "^3.11.0"
   },
