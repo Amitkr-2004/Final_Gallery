@@ -25,7 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getStats: () => ipcRenderer.invoke('core:gallery:get-stats'),
     searchFiles: (searchTerm) => ipcRenderer.invoke('core:gallery:search-files', searchTerm),
     deleteFile: (fileId) => ipcRenderer.invoke('core:gallery:delete-file', fileId),
-    clearAll: () => ipcRenderer.invoke('core:gallery:clear-all')
+    clearAll: () => ipcRenderer.invoke('core:gallery:clear-all'),
+    getImageData: (filepath) => ipcRenderer.invoke('core:gallery:get-image-data', filepath)
   },
 
   // System APIs

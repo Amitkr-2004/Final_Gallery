@@ -4,30 +4,30 @@
  */
 
 :root {
-  /* Colors - Modern Purple/Violet Theme */
-  --color-primary: #8B5CF6;
-  --color-primary-dark: #7C3AED;
-  --color-primary-light: #A78BFA;
+  /* Colors - Orchids International School Theme (Maroon & Gold) */
+  --color-primary: #800020;
+  --color-primary-dark: #5C0015;
+  --color-primary-light: #A64D5B;
 
-  --color-success: #10b981;
+  --color-success: #228B22;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  --color-info: #6366F1;
+  --color-info: #DAA520;
 
   --color-bg-primary: #ffffff;
-  --color-bg-secondary: #faf5ff;
-  --color-bg-tertiary: #f3e8ff;
+  --color-bg-secondary: #FFF8F5;
+  --color-bg-tertiary: #FFE8E0;
 
-  --color-text-primary: #1e1b4b;
+  --color-text-primary: #3D0011;
   --color-text-secondary: #6b7280;
   --color-text-tertiary: #9ca3af;
 
-  --color-border: #e9d5ff;
-  --color-border-light: #f3e8ff;
+  --color-border: #E8C4C4;
+  --color-border-light: #FFE8E0;
 
-  --color-sidebar-bg: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
-  --color-sidebar-text: #d8b4fe;
-  --color-sidebar-active: #8B5CF6;
+  --color-sidebar-bg: linear-gradient(180deg, #3D0011 0%, #5C0015 100%);
+  --color-sidebar-text: #F5DEB3;
+  --color-sidebar-active: #800020;
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -203,12 +203,12 @@ p {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 100%);
+  background: linear-gradient(180deg, #D4A574 0%, #DAA520 100%);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 100%);
+  background: linear-gradient(180deg, #DAA520 0%, #800020 100%);
 }
 
 /* Selection */

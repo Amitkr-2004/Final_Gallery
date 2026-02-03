@@ -38,6 +38,7 @@
     "face-api.js": "^0.22.2",
     "form-data": "^4.0.5",
     "image-size": "^1.2.1",
+    "lucide-react": "^0.563.0",
     "multer": "^2.0.2",
     "uuid": "^9.0.1",
     "winston": "^3.11.0"

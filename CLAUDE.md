@@ -1,6 +1,8 @@
-# Face Gallery - AI-Powered Photo Management System
+# Orchids Gallery - AI-Powered Photo Management System
 
 **Built with Claude Code Assistant**
+
+**Branded for Orchids International School**
 
 A sophisticated Electron-based desktop application that uses real machine learning models to detect, cluster, and organize faces in your photo collection, with seamless Google Cloud Storage integration.
 
@@ -44,6 +46,7 @@ Face Gallery is a desktop application that automatically:
 - ✅ **Collection Management** - Review and organize face collections
 - ✅ **Local Database** - SQLite for offline-first architecture
 - ✅ **Crash-Safe Uploads** - Resumable sync with status tracking
+- ✅ **IPC-Based Image Loading** - Reliable image display via base64 data URLs
 
 ### ML Features
 - **Face Detection**: SSD MobileNet V1 (50-200ms per image)
@@ -51,6 +54,12 @@ Face Gallery is a desktop application that automatically:
 - **Face Recognition**: 128-dim FaceNet embeddings
 - **Quality Scoring**: Automatic face quality assessment
 - **Similarity Matching**: Euclidean distance for face clustering
+
+### UI/UX Features
+- **Orchids International School Branding** - Custom maroon/gold theme
+- **Lucide React Icons** - Professional SVG icons throughout the app
+- **Responsive Grid Gallery** - Auto-fill image grid with hover effects
+- **Loading States** - Spinner animations for async operations
 
 ---
 
@@ -107,7 +116,8 @@ Face Gallery is a desktop application that automatically:
 ### Frontend
 - **React** 18.x - UI framework
 - **React Router** - Navigation
-- **Electron** - Desktop app framework
+- **Electron** 28.x - Desktop app framework
+- **Lucide React** - Modern SVG icon library
 
 ### Backend (Main Process)
 - **Node.js** 18+ - Runtime environment
@@ -254,6 +264,34 @@ await window.electronAPI.gcs.listCollections()
 // Returns: { success: boolean, collections: array }
 ```
 
+#### Gallery APIs
+
+```javascript
+// Get all uploaded files
+await window.electronAPI.gallery.getAllFiles({ limit: 1000 })
+// Returns: { success: boolean, files: array }
+
+// Get gallery statistics
+await window.electronAPI.gallery.getStats()
+// Returns: { success: boolean, stats: { totalFiles, totalSize, todayUploads } }
+
+// Search files by filename
+await window.electronAPI.gallery.searchFiles(searchTerm)
+// Returns: { success: boolean, files: array }
+
+// Delete a single file
+await window.electronAPI.gallery.deleteFile(fileId)
+// Returns: { success: boolean, message: string }
+
+// Clear entire gallery
+await window.electronAPI.gallery.clearAll()
+// Returns: { success: boolean, deletedCount: number }
+
+// Get image as base64 data URL (for reliable display)
+await window.electronAPI.gallery.getImageData(filepath)
+// Returns: { success: boolean, dataUrl: string }
+```
+
 #### Face Scanner APIs
 
 ```javascript
@@ -342,6 +380,24 @@ await window.electronAPI.scanner.cleanupTemp()
 - **Location:** `src/main/services/face-scanner.js`
 - **Use Cases:** Attendance systems, access control, face identification
 
+### Stage 6: UI Branding & Image Loading ✅
+- **Objective:** Rebrand app for Orchids International School with reliable image loading
+- **Implementation:**
+  - Complete color palette change from purple to maroon/gold
+  - Replaced emoji icons with Lucide React SVG icons
+  - Custom protocol registration with `protocol.registerSchemesAsPrivileged()`
+  - Modern `protocol.handle()` API for Electron 28+
+  - IPC-based image loading via base64 data URLs
+  - GalleryImage component with loading states
+- **Files Modified:**
+  - `src/renderer/styles/global.css` - CSS variables
+  - `src/renderer/layouts/MainLayout.jsx` - Navigation icons
+  - `src/renderer/pages/Gallery.jsx` - Image loading component
+  - `src/renderer/pages/Dashboard.jsx` - Dashboard icons
+  - `src/main/index.js` - Protocol handler
+  - `src/main/ipc/gallery-handlers.js` - Image data IPC
+  - `src/renderer/preload.js` - Gallery API exposure
+
 ---
 
 ## 🧪 Testing Guide
@@ -422,12 +478,14 @@ electron-app/
 │   │   │   └── schema.js         # SQLite schema
 │   │   ├── ipc/
 │   │   │   ├── handlers.js       # IPC handler registration
-│   │   │   ├── gcs-upload-handlers.js  # GCS IPC handlers
+│   │   │   ├── gallery-handlers.js    # Gallery IPC (incl. getImageData)
+│   │   │   ├── gcs-upload-handlers.js # GCS IPC handlers
 │   │   │   └── ...
 │   │   ├── services/
 │   │   │   ├── face-detection.js        # Real face detection (ML)
 │   │   │   ├── face-clustering.js       # Face clustering algorithm
 │   │   │   ├── face-processing.js       # Face processing pipeline
+│   │   │   ├── face-scanner.js          # Face scanning & matching
 │   │   │   ├── gcs-upload.js           # GCS upload service
 │   │   │   ├── gcp-data-preparation.js # Data prep for GCP
 │   │   │   └── mock-face-detection.js  # Mock (deprecated)
@@ -435,12 +493,17 @@ electron-app/
 │   │   │   └── config.js         # Configuration management
 │   │   ├── utils/
 │   │   │   └── logger.js         # Winston logger
-│   │   └── index.js              # Main entry point
+│   │   └── index.js              # Main entry point (protocol handler)
 │   │
 │   └── renderer/                 # Renderer Process (React)
-│       ├── pages/                # Page components
-│       ├── layouts/              # Layout components
-│       ├── styles/               # CSS styles
+│       ├── pages/
+│       │   ├── Gallery.jsx       # Gallery with GalleryImage component
+│       │   ├── Dashboard.jsx     # Dashboard with Lucide icons
+│       │   └── ...
+│       ├── layouts/
+│       │   └── MainLayout.jsx    # Sidebar with Orchids branding
+│       ├── styles/
+│       │   └── global.css        # CSS variables (maroon theme)
 │       ├── App.jsx               # Root component
 │       └── preload.js            # Preload script (IPC bridge)
 │
@@ -541,6 +604,58 @@ gs://your-bucket/
 
 ---
 
+## 🎨 UI Branding - Orchids International School
+
+### Color Palette
+
+| Purpose | Color Name | Hex Code |
+|---------|------------|----------|
+| Primary | Maroon | `#800020` |
+| Primary Dark | Dark Maroon | `#5C0015` |
+| Primary Light | Light Maroon | `#A64D5B` |
+| Accent/Gold | Gold | `#DAA520` |
+| Secondary | Forest Green | `#228B22` |
+| Sidebar Background | Maroon Gradient | `#3D0011` → `#5C0015` |
+| Sidebar Text | Light Gold | `#F5DEB3` |
+| Card Background | Light Pink | `#FFF8F5` |
+| Border | Soft Pink | `#E8C4C4` |
+
+### Icon Library
+
+The app uses **Lucide React** icons throughout. Key icons include:
+
+| Component | Icon | Usage |
+|-----------|------|-------|
+| Dashboard | `LayoutDashboard` | Navigation |
+| Gallery | `Image` | Navigation & headers |
+| Upload | `Upload`, `FolderUp` | Upload actions |
+| Settings | `Settings`, `Cog` | Configuration |
+| Storage | `HardDrive` | Storage stats |
+| Calendar | `Calendar` | Date displays |
+| Search | `Search` | Search functionality |
+| Delete | `Trash2` | Delete actions |
+| Loading | `Loader2`, `RefreshCw` | Loading states |
+| Logo | `GraduationCap` | Orchids branding |
+
+### CSS Variables
+
+All colors are defined in `src/renderer/styles/global.css`:
+
+```css
+:root {
+  --color-primary: #800020;
+  --color-primary-dark: #5C0015;
+  --color-primary-light: #A64D5B;
+  --color-success: #228B22;
+  --color-info: #DAA520;
+  --color-sidebar-bg: linear-gradient(180deg, #3D0011 0%, #5C0015 100%);
+  --color-sidebar-text: #F5DEB3;
+  --color-sidebar-active: #800020;
+}
+```
+
+---
+
 ## 🐛 Troubleshooting
 
 ### Issue: "GCS service not initialized"
@@ -568,6 +683,28 @@ gs://your-bucket/
 **Solution:**
 1. Rebuild native modules: `npx electron-rebuild`
 2. Or reinstall: `rm -rf node_modules && npm install`
+
+### Issue: Images not displaying in Gallery
+**Solution:**
+1. Images are now loaded via IPC as base64 data URLs for reliability
+2. Check DevTools console for any IPC errors
+3. Verify files exist in `app-data/uploads/` directory
+4. Ensure `uploaded_files` table has correct file paths
+5. Check main process logs for "📷 Gallery:" messages
+6. The custom protocol `app://` requires Electron 25+ with `protocol.registerSchemesAsPrivileged()`
+
+### Issue: Custom protocol not working (Electron 25+)
+**Solution:**
+1. Ensure `protocol.registerSchemesAsPrivileged()` is called BEFORE `app.whenReady()`
+2. Use `protocol.handle()` instead of deprecated `registerFileProtocol()`
+3. Check CSP in `index.html` includes `img-src 'self' data: file: app:`
+4. Restart the app completely (not just hot reload)
+
+### Issue: Port 9000 already in use (macOS)
+**Solution:**
+```bash
+lsof -ti:9000 | xargs kill -9
+```
 
 ---
 
@@ -634,6 +771,19 @@ For issues and questions:
 
 ---
 
-**Last Updated:** February 2, 2026
-**Version:** 1.0.0
+**Last Updated:** February 4, 2026
+**Version:** 1.1.0
 **Status:** Production Ready ✅
+
+### Changelog
+
+#### v1.1.0 (February 4, 2026)
+- ✅ Rebranded UI for Orchids International School (maroon/gold theme)
+- ✅ Replaced emoji icons with Lucide React SVG icons
+- ✅ Fixed image loading in Gallery with IPC-based base64 approach
+- ✅ Updated custom protocol handler for Electron 28 compatibility
+- ✅ Added `getImageData` IPC API for reliable image display
+- ✅ Improved error handling and loading states in Gallery
+
+#### v1.0.0 (February 2, 2026)
+- Initial release with face detection, clustering, and GCS sync

@@ -1,10 +1,27 @@
 /**
  * Dashboard Page
  * Main entry point with upload functionality and stats
+ * Orchids International School Branding
  */
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Upload,
+  FolderOpen,
+  Image,
+  HardDrive,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  Images,
+  FolderUp,
+  SkipForward,
+  XCircle,
+  BarChart3,
+  Camera
+} from 'lucide-react';
 import './Dashboard.css';
 import './Page.css';
 
@@ -160,8 +177,11 @@ function Dashboard() {
     <div className="dashboard">
       {/* Header */}
       <div className="dashboard-header">
-        <h1 className="dashboard-title">📸 Image Gallery</h1>
-        <p className="dashboard-subtitle">Upload and manage your images locally</p>
+        <h1 className="dashboard-title">
+          <Camera size={40} style={{ marginRight: '12px', verticalAlign: 'middle' }} />
+          Orchids Gallery
+        </h1>
+        <p className="dashboard-subtitle">Upload and manage your school event photos</p>
       </div>
 
       {/* Main Upload Area */}
@@ -176,7 +196,7 @@ function Dashboard() {
           {!uploading ? (
             <>
               <div className="upload-icon">
-                {dragActive ? '📂' : '📤'}
+                {dragActive ? <FolderOpen size={80} /> : <Upload size={80} />}
               </div>
 
               <h2 className="upload-title">
@@ -195,7 +215,7 @@ function Dashboard() {
                   className="btn btn-primary btn-large"
                   onClick={handleUploadFiles}
                 >
-                  <span className="btn-icon">📁</span>
+                  <span className="btn-icon"><Images size={20} /></span>
                   Upload Files
                 </button>
 
@@ -203,7 +223,7 @@ function Dashboard() {
                   className="btn btn-secondary btn-large"
                   onClick={handleUploadFolder}
                 >
-                  <span className="btn-icon">📂</span>
+                  <span className="btn-icon"><FolderUp size={20} /></span>
                   Upload Folder
                 </button>
               </div>
@@ -217,10 +237,16 @@ function Dashboard() {
               <div className="upload-progress-icon">
                 {uploadProgress?.complete ? (
                   uploadProgress.failed === 0 ? (
-                    uploadProgress.success === 0 ? 'ℹ️' : '✅'
-                  ) : '⚠️'
+                    uploadProgress.success === 0 ? (
+                      <AlertCircle size={60} style={{ color: '#DAA520' }} />
+                    ) : (
+                      <CheckCircle size={60} style={{ color: '#228B22' }} />
+                    )
+                  ) : (
+                    <AlertCircle size={60} style={{ color: '#f59e0b' }} />
+                  )
                 ) : (
-                  <div className="spinner"></div>
+                  <Loader2 size={60} className="spin-animation" />
                 )}
               </div>
 
@@ -237,10 +263,10 @@ function Dashboard() {
 
               {uploadProgress && (
                 <div className="upload-progress-stats">
-                  <p>✅ Success: {uploadProgress.success}</p>
-                  {uploadProgress.skipped > 0 && <p>⏭️ Skipped (Duplicates): {uploadProgress.skipped}</p>}
-                  {uploadProgress.failed > 0 && <p>❌ Failed: {uploadProgress.failed}</p>}
-                  <p>📊 Total: {uploadProgress.total}</p>
+                  <p><CheckCircle size={16} style={{ marginRight: '8px', color: '#228B22' }} /> Success: {uploadProgress.success}</p>
+                  {uploadProgress.skipped > 0 && <p><SkipForward size={16} style={{ marginRight: '8px', color: '#DAA520' }} /> Skipped (Duplicates): {uploadProgress.skipped}</p>}
+                  {uploadProgress.failed > 0 && <p><XCircle size={16} style={{ marginRight: '8px', color: '#ef4444' }} /> Failed: {uploadProgress.failed}</p>}
+                  <p><BarChart3 size={16} style={{ marginRight: '8px', color: '#800020' }} /> Total: {uploadProgress.total}</p>
                 </div>
               )}
 
@@ -257,7 +283,7 @@ function Dashboard() {
       {/* Stats Section */}
       <div className="dashboard-stats">
         <div className="stat-card">
-          <div className="stat-icon">📊</div>
+          <div className="stat-icon"><Images size={48} color="#800020" /></div>
           <div className="stat-content">
             <div className="stat-value">{stats.totalFiles}</div>
             <div className="stat-label">Total Images</div>
@@ -265,7 +291,7 @@ function Dashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">💾</div>
+          <div className="stat-icon"><HardDrive size={48} color="#800020" /></div>
           <div className="stat-content">
             <div className="stat-value">{formatFileSize(stats.totalSize)}</div>
             <div className="stat-label">Storage Used</div>
@@ -273,7 +299,7 @@ function Dashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">🆕</div>
+          <div className="stat-icon"><Calendar size={48} color="#800020" /></div>
           <div className="stat-content">
             <div className="stat-value">{stats.todayUploads || 0}</div>
             <div className="stat-label">Today's Uploads</div>
@@ -287,7 +313,7 @@ function Dashboard() {
           className="btn btn-outline"
           onClick={() => navigate('/gallery')}
         >
-          <span className="btn-icon">🖼️</span>
+          <span className="btn-icon"><Image size={20} /></span>
           View Gallery
         </button>
       </div>

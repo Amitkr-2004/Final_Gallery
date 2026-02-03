@@ -1,30 +1,23 @@
 /**
  * Main Layout Component
  * Sidebar navigation + content area
+ * Orchids International School Branding
  */
 
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Image,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap
+} from 'lucide-react';
 import './MainLayout.css';
 
-// Icons (using Unicode symbols for now)
-const icons = {
-  dashboard: '📊',
-  downloads: '⬇️',
-  gallery: '🖼️',
-  processing: '⚙️',
-  people: '👥',
-  storage: '💾',
-  settings: '⚙️'
-};
-
 const navigation = [
-  { name: 'Dashboard', path: '/dashboard', icon: icons.dashboard },
-  { name: 'Downloads', path: '/downloads', icon: icons.downloads },
-  { name: 'Gallery', path: '/gallery', icon: icons.gallery },
-  { name: 'Processing', path: '/processing', icon: icons.processing },
-  { name: 'Storage', path: '/storage', icon: icons.storage },
-  { name: 'Settings', path: '/settings', icon: icons.settings }
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Gallery', path: '/gallery', icon: Image }
 ];
 
 function MainLayout({ children }) {
@@ -39,35 +32,45 @@ function MainLayout({ children }) {
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="logo">
-            {!collapsed && <h2>Image Processor</h2>}
-            {collapsed && <h2>IP</h2>}
+            {!collapsed && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <GraduationCap size={28} color="#DAA520" />
+                <h2>Orchids Gallery</h2>
+              </div>
+            )}
+            {collapsed && <GraduationCap size={28} color="#DAA520" />}
           </div>
           <button
             className="collapse-btn"
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? 'Expand' : 'Collapse'}
           >
-            {collapsed ? '→' : '←'}
+            {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </button>
         </div>
 
         <nav className="sidebar-nav">
-          {navigation.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-              title={collapsed ? item.name : ''}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {!collapsed && <span className="nav-label">{item.name}</span>}
-            </Link>
-          ))}
+          {navigation.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                title={collapsed ? item.name : ''}
+              >
+                <span className="nav-icon">
+                  <IconComponent size={20} />
+                </span>
+                {!collapsed && <span className="nav-label">{item.name}</span>}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">
           <div className="version">
-            {!collapsed && <span>v1.0.0</span>}
+            {!collapsed && <span>v1.1.0</span>}
           </div>
         </div>
       </aside>

@@ -188,15 +188,15 @@ function Upload() {
       <div className="page-content">
         {/* ============ Face Recognition Upload Section ============ */}
         <div style={{
-          border: '2px solid #667eea',
+          border: '2px solid #800020',
           borderRadius: '12px',
           padding: '30px',
           marginBottom: '30px',
-          background: 'linear-gradient(135deg, #f5f7ff 0%, #fff 100%)'
+          background: 'linear-gradient(135deg, #FFF8F5 0%, #fff 100%)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
             <div>
-              <h2 style={{ color: '#667eea', margin: 0 }}>🤖 Upload for Face Recognition</h2>
+              <h2 style={{ color: '#800020', margin: 0 }}>Upload for Face Recognition</h2>
               <p style={{ color: '#666', margin: '5px 0 0' }}>
                 Add your photo to the face recognition database (InsightFace + FAISS)
               </p>
@@ -233,7 +233,7 @@ function Upload() {
                 htmlFor="face-file-input"
                 style={{
                   display: 'block',
-                  border: '2px dashed #667eea',
+                  border: '2px dashed #800020',
                   borderRadius: '8px',
                   padding: '40px 20px',
                   textAlign: 'center',
@@ -243,7 +243,7 @@ function Upload() {
                 }}
               >
                 <div style={{ fontSize: '40px', marginBottom: '10px' }}>📷</div>
-                <p style={{ color: '#667eea', fontWeight: 'bold', margin: 0 }}>
+                <p style={{ color: '#800020', fontWeight: 'bold', margin: 0 }}>
                   Click to select your photo
                 </p>
                 <p style={{ color: '#999', fontSize: '14px', margin: '5px 0 0' }}>
@@ -260,7 +260,7 @@ function Upload() {
                     padding: '12px 24px',
                     fontSize: '16px',
                     cursor: (!previewUrl || faceUploading || apiStatus !== 'connected') ? 'not-allowed' : 'pointer',
-                    backgroundColor: '#667eea',
+                    backgroundColor: '#800020',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -349,7 +349,7 @@ function Upload() {
                     <span key={i} style={{
                       display: 'inline-block',
                       padding: '4px 10px',
-                      backgroundColor: p.is_new ? '#667eea' : '#48bb78',
+                      backgroundColor: p.is_new ? '#800020' : '#228B22',
                       color: 'white',
                       borderRadius: '12px',
                       margin: '2px 4px',

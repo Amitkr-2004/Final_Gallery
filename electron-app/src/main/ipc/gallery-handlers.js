@@ -57,9 +57,12 @@ function registerGalleryHandlers(ipcMain, getService) {
    */
   ipcMain.handle('core:gallery:get-all-files', async (event, options = {}) => {
     const db = getDatabase();
+    const logger = getService('logger');
 
     try {
       const { limit = 1000, offset = 0, sortBy = 'upload_date', sortOrder = 'DESC' } = options;
+
+      logger.info('📷 Gallery: Fetching files', { limit, offset, sortBy, sortOrder });
 
       const query = `
         SELECT id, filename, filepath, upload_date, file_size
@@ -70,11 +73,14 @@ function registerGalleryHandlers(ipcMain, getService) {
 
       const files = db.prepare(query).all(limit, offset);
 
+      logger.info('📷 Gallery: Files fetched', { count: files.length, firstFile: files[0]?.filename });
+
       return {
         success: true,
         files
       };
     } catch (error) {
+      logger.error('📷 Gallery: Error fetching files', { error: error.message });
       return {
         success: false,
         error: error.message
@@ -334,6 +340,59 @@ function registerGalleryHandlers(ipcMain, getService) {
       };
     } catch (error) {
       logger.error('Failed to clear gallery', { error: error.message });
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  });
+
+  /**
+   * Get image data as base64 for display
+   * Channel: core:gallery:get-image-data
+   */
+  ipcMain.handle('core:gallery:get-image-data', async (event, filepath) => {
+    const logger = getService('logger');
+
+    try {
+      logger.info('📷 Gallery: Getting image data', { filepath });
+
+      // Check if file exists
+      const fsSync = require('fs');
+      if (!fsSync.existsSync(filepath)) {
+        logger.warn('📷 Gallery: File not found', { filepath });
+        return {
+          success: false,
+          error: 'File not found'
+        };
+      }
+
+      // Read file and convert to base64
+      const fileBuffer = await fs.readFile(filepath);
+      const base64 = fileBuffer.toString('base64');
+
+      // Determine content type based on file extension
+      const ext = path.extname(filepath).toLowerCase();
+      const contentTypes = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp'
+      };
+      const contentType = contentTypes[ext] || 'image/jpeg';
+
+      const dataUrl = `data:${contentType};base64,${base64}`;
+
+      logger.info('📷 Gallery: Image data prepared', { filepath, size: base64.length });
+
+      return {
+        success: true,
+        dataUrl
+      };
+    } catch (error) {
+      logger.error('📷 Gallery: Error getting image data', { filepath, error: error.message });
       return {
         success: false,
         error: error.message

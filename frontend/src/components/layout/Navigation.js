@@ -18,7 +18,7 @@ const Navigation = () => {
     <nav className="main-nav">
       <div className="nav-container">
         <Link to="/" className="nav-logo">
-          <h2>Gallery App</h2>
+          <h2>Orchids Gallery</h2>
         </Link>
 
         <div className="nav-links">

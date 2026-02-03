@@ -6,13 +6,29 @@
 // Load environment variables from .env file
 require('dotenv').config();
 
-const { app, BrowserWindow, protocol, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, protocol, Tray, Menu, nativeImage, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 const { getConfigService } = require('./storage/config');
 const { setupLogger } = require('./utils/logger');
 const { initializeDatabase, getDatabase } = require('./database/schema');
 const { registerIPCHandlers } = require('./ipc/handlers');
+
+// Register custom protocol as privileged BEFORE app is ready
+// This is required for Electron 25+ to allow file:// like access
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      bypassCSP: false
+    }
+  }
+]);
 
 // Keep a global reference to prevent garbage collection
 let mainWindow = null;
@@ -23,26 +39,31 @@ let logger = null;
 /**
  * Register custom protocol for serving local images
  * This allows the renderer to load images using app://uploads/filename.jpg
+ * Uses the modern protocol.handle API (Electron 25+)
  */
 function registerCustomProtocol() {
-  protocol.registerFileProtocol('app', (request, callback) => {
+  protocol.handle('app', async (request) => {
     try {
       // Extract the file path from the URL
       // Format: app://uploads/2026-01-29_image.jpg
-      const url = request.url.replace('app://', '');
+      const url = new URL(request.url);
+      const pathname = url.hostname + url.pathname;
+
+      // Debug logging
+      logger.info('📷 Protocol request', { requestUrl: request.url, hostname: url.hostname, pathname: url.pathname, combined: pathname });
 
       // Security: Only allow access to uploads directory
-      if (!url.startsWith('uploads/')) {
-        logger.warn('Blocked access to non-uploads path', { url });
-        callback({ error: -6 }); // FILE_NOT_FOUND
-        return;
+      if (!pathname.startsWith('uploads')) {
+        logger.warn('Blocked access to non-uploads path', { pathname });
+        return new Response('Not Found', { status: 404 });
       }
 
       // Get the upload path from config
       const uploadPath = configService.get('storage.uploadPath');
 
       // Extract filename and decode URL encoding
-      const filename = decodeURIComponent(url.replace('uploads/', ''));
+      // pathname is like "uploads/filename.jpg" or just the filename after "uploads/"
+      const filename = decodeURIComponent(pathname.replace(/^uploads\/?/, ''));
 
       // Build the full file path
       const filePath = path.join(uploadPath, filename);
@@ -52,23 +73,24 @@ function registerCustomProtocol() {
       const normalizedUploadPath = path.normalize(uploadPath);
 
       if (!normalizedPath.startsWith(normalizedUploadPath)) {
-        logger.warn('Blocked directory traversal attempt', { url, filePath });
-        callback({ error: -6 }); // FILE_NOT_FOUND
-        return;
+        logger.warn('Blocked directory traversal attempt', { pathname, filePath });
+        return new Response('Forbidden', { status: 403 });
       }
 
       // Check if file exists
       if (!fs.existsSync(normalizedPath)) {
         logger.warn('File not found', { filePath: normalizedPath });
-        callback({ error: -6 }); // FILE_NOT_FOUND
-        return;
+        return new Response('Not Found', { status: 404 });
       }
 
-      // Serve the file
-      callback({ path: normalizedPath });
+      // Use net.fetch with file:// URL to serve the file (recommended approach in Electron 25+)
+      const fileUrl = pathToFileURL(normalizedPath).href;
+      logger.info('✅ Serving file via net.fetch', { filePath: normalizedPath, fileUrl });
+
+      return net.fetch(fileUrl);
     } catch (error) {
       logger.error('Error serving file via custom protocol', { error: error.message, url: request.url });
-      callback({ error: -2 }); // FAILED
+      return new Response('Internal Server Error', { status: 500 });
     }
   });
 

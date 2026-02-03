@@ -4,9 +4,9 @@
  */
 
 .dashboard {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px 20px;
+  width: 100%;
+  margin: 0;
+  padding: 40px;
 }
 
 /* Header */
@@ -35,11 +35,11 @@
 }
 
 .upload-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #800020 0%, #5C0015 100%);
   border-radius: 20px;
   padding: 60px 40px;
   text-align: center;
-  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 40px rgba(128, 0, 32, 0.35);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -64,14 +64,26 @@
 
 .upload-card.drag-active {
   transform: scale(1.02);
-  box-shadow: 0 15px 50px rgba(102, 126, 234, 0.4);
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  box-shadow: 0 15px 50px rgba(128, 0, 32, 0.5);
+  background: linear-gradient(135deg, #5C0015 0%, #800020 100%);
 }
 
 .upload-icon {
   font-size: 80px;
   margin-bottom: 20px;
   animation: float 3s ease-in-out infinite;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.upload-icon svg {
+  stroke-width: 1.5;
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
 }
 
 @keyframes float {
@@ -128,11 +140,18 @@
 
 .btn-icon {
   font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon svg {
+  stroke-width: 2;
 }
 
 .btn-primary {
   background: white;
-  color: #667eea;
+  color: #800020;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -164,15 +183,15 @@
 
 .btn-outline {
   background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: #800020;
+  border: 2px solid #800020;
 }
 
 .btn-outline:hover {
-  background: #667eea;
+  background: #800020;
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(128, 0, 32, 0.35);
 }
 
 .upload-formats {
@@ -189,6 +208,14 @@
 .upload-progress-icon {
   font-size: 60px;
   margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+.upload-progress-icon svg {
+  stroke-width: 1.5;
 }
 
 .spinner {
@@ -220,7 +247,14 @@
 }
 
 .upload-progress-stats p {
-  margin: 5px 0;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-progress-stats svg {
+  vertical-align: middle;
 }
 
 .upload-redirect-message {
@@ -257,6 +291,13 @@
 .stat-icon {
   font-size: 48px;
   opacity: 0.9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon svg {
+  stroke-width: 1.5;
 }
 
 .stat-content {

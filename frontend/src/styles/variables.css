@@ -13,10 +13,10 @@
   --text-tertiary: #718096;
   --text-inverse: #ffffff;
 
-  --accent-primary: #10b981;
-  --accent-primary-hover: #059669;
-  --accent-secondary: #3b82f6;
-  --accent-success: #10b981;
+  --accent-primary: #800020;
+  --accent-primary-hover: #5C0015;
+  --accent-secondary: #DAA520;
+  --accent-success: #228B22;
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
 
@@ -33,7 +33,7 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.15);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+  --shadow-glow: 0 0 20px rgba(128, 0, 32, 0.3);
 
   /* Spacing */
   --spacing-xs: 0.25rem;   /* 4px */
@@ -71,16 +71,16 @@
   --bg-secondary: #2a2a2a;
   --bg-tertiary: #3a3a3a;
   --bg-hover: #333333;
-  --bg-gradient: linear-gradient(135deg, #1a2e1a 0%, #1a2a2e 100%);
+  --bg-gradient: linear-gradient(135deg, #2D0010 0%, #3D0011 100%);
 
   --text-primary: #f5f5f5;
   --text-secondary: #d1d5db;
   --text-tertiary: #9ca3af;
   --text-inverse: #1a1a1a;
 
-  --accent-primary: #34d399;
-  --accent-primary-hover: #10b981;
-  --accent-secondary: #60a5fa;
+  --accent-primary: #A64D5B;
+  --accent-primary-hover: #800020;
+  --accent-secondary: #DAA520;
   --accent-success: #34d399;
   --accent-warning: #fbbf24;
   --accent-error: #f87171;
@@ -97,7 +97,7 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
   --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.7);
-  --shadow-glow: 0 0 20px rgba(129, 140, 248, 0.4);
+  --shadow-glow: 0 0 20px rgba(166, 77, 91, 0.4);
 }
 
 /* Utility classes for quick theming */

@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #800020 0%, #5C0015 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -28,7 +28,7 @@
         }
 
         h1 {
-            color: #667eea;
+            color: #800020;
             text-align: center;
             margin-bottom: 10px;
             font-size: 2.5em;
@@ -47,7 +47,7 @@
         }
 
         .model-badge span {
-            background: linear-gradient(135deg, #48bb78, #38a169);
+            background: linear-gradient(135deg, #228B22, #1B6B1B);
             color: white;
             padding: 8px 20px;
             border-radius: 20px;
@@ -109,7 +109,7 @@
             transform: translate(-50%, -50%);
             width: 280px;
             height: 350px;
-            border: 4px solid rgba(102, 126, 234, 0.8);
+            border: 4px solid rgba(128, 0, 32, 0.8);
             border-radius: 50%;
             pointer-events: none;
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
@@ -164,23 +164,23 @@
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #800020;
             color: white;
         }
 
         .btn-primary:hover:not(:disabled) {
-            background: #5568d3;
+            background: #5C0015;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 15px rgba(128, 0, 32, 0.4);
         }
 
         .btn-success {
-            background: #48bb78;
+            background: #228B22;
             color: white;
         }
 
         .btn-success:hover:not(:disabled) {
-            background: #38a169;
+            background: #1B6B1B;
             transform: translateY(-2px);
         }
 
@@ -223,7 +223,7 @@
             padding: 20px;
             margin-bottom: 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-left: 5px solid #667eea;
+            border-left: 5px solid #800020;
         }
 
         .match-header {
@@ -276,7 +276,7 @@
         .stat-value {
             font-size: 1.8em;
             font-weight: bold;
-            color: #667eea;
+            color: #800020;
         }
 
         .no-matches {
@@ -333,7 +333,7 @@
 
         .spinner {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border-top: 4px solid #800020;
             border-radius: 50%;
             width: 50px;
             height: 50px;
@@ -367,7 +367,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Live Camera Face Scanner</h1>
+        <h1>Orchids Gallery - Face Scanner</h1>
         <p class="subtitle">Powered by InsightFace (512D ArcFace embeddings)</p>
 
         <div class="model-badge">
@@ -681,7 +681,7 @@
 
             if (dbStatus.status === 'empty') {
                 statusIcon = '';
-                statusColor = '#667eea';
+                statusColor = '#800020';
                 statusText = 'Empty DB';
             } else if (dbStatus.status === 'below_threshold') {
                 statusIcon = '';
