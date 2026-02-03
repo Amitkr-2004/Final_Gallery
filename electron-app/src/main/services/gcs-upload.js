@@ -91,6 +91,7 @@ function isReady() {
  */
 async function uploadImage(localPath, collectionId, imageId) {
   if (!isReady()) {
+    logger.warn('GCS upload skipped - not ready', { imageId });
     return { success: false, error: 'GCS service not initialized' };
   }
 
@@ -100,6 +101,20 @@ async function uploadImage(localPath, collectionId, imageId) {
 
     // Generate GCS path
     const gcsPath = `images/${collectionId}/${imageId}${ext}`;
+
+    logger.info('📤 Starting GCS upload...', {
+      imageId,
+      localPath,
+      gcsPath,
+      bucket: config.bucket.name
+    });
+
+    // Check if local file exists
+    const fsSync = require('fs');
+    if (!fsSync.existsSync(localPath)) {
+      logger.error('Local file not found for GCS upload', { localPath, imageId });
+      return { success: false, error: `Local file not found: ${localPath}` };
+    }
 
     // Upload file
     await bucket.upload(localPath, {
@@ -114,16 +129,18 @@ async function uploadImage(localPath, collectionId, imageId) {
       }
     });
 
-    logger.info('Image uploaded to GCS', { imageId, gcsPath });
+    logger.info('✅ Image uploaded to GCS', { imageId, gcsPath });
 
     return {
       success: true,
       gcsPath: `gs://${config.bucket.name}/${gcsPath}`
     };
   } catch (error) {
-    logger.error('Failed to upload image to GCS', {
+    logger.error('❌ Failed to upload image to GCS', {
       imageId,
-      error: error.message
+      localPath,
+      error: error.message,
+      stack: error.stack
     });
     return {
       success: false,

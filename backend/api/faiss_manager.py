@@ -281,17 +281,24 @@ class FAISSManager:
 _faiss_manager = None
 
 
-def get_faiss_manager(similarity_threshold=0.7):
+def get_faiss_manager(similarity_threshold=None):
     """
     Get or create global FAISS manager instance.
 
+    IMPORTANT: Always reads threshold from Django settings to ensure consistency.
+
     Args:
-        similarity_threshold: Minimum cosine similarity to match a person
+        similarity_threshold: Override threshold (optional, defaults to settings.FAISS_SIMILARITY_THRESHOLD)
 
     Returns:
-        FAISSManager instance
+        FAISSManager instance with current threshold from settings
     """
     global _faiss_manager
+
+    # Always get threshold from settings for consistency
+    if similarity_threshold is None:
+        similarity_threshold = getattr(settings, 'FAISS_SIMILARITY_THRESHOLD', 0.85)
+
     if _faiss_manager is None:
         _faiss_manager = FAISSManager(similarity_threshold=similarity_threshold)
         # Rebuild index from database if it doesn't exist
@@ -304,4 +311,8 @@ def get_faiss_manager(similarity_threshold=0.7):
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to rebuild FAISS index on initialization: {str(e)}")
                 # Continue anyway - index will be created on first upload
+    else:
+        # Always update threshold from settings (fixes singleton threshold issue)
+        _faiss_manager.similarity_threshold = similarity_threshold
+
     return _faiss_manager

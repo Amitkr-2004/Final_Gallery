@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Your Face</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
+        h1 { color: #667eea; }
+        .upload-area { border: 2px dashed #667eea; padding: 40px; text-align: center; margin: 20px 0; border-radius: 10px; }
+        button { background: #667eea; color: white; padding: 15px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #5a67d8; }
+        #result { margin-top: 20px; padding: 20px; border-radius: 8px; }
+        .success { background: #c6f6d5; color: #22543d; }
+        .error { background: #fed7d7; color: #742a2a; }
+        #preview { max-width: 300px; margin: 20px auto; display: block; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Upload Your Face Photo</h1>
+    <p>Upload a clear photo of your face to add yourself to the database.</p>
+    
+    <div class="upload-area">
+        <input type="file" id="fileInput" accept="image/*" style="margin-bottom: 15px;">
+        <br>
+        <img id="preview" style="display:none;">
+        <br><br>
+        <button onclick="uploadPhoto()">Upload to Database</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const result = document.getElementById('result');
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+            }
+        });
+        
+        async function uploadPhoto() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a photo first');
+                return;
+            }
+            
+            result.innerHTML = 'Uploading and processing...';
+            result.className = '';
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/upload/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.photo_id) {
+                    result.className = 'success';
+                    result.innerHTML = `
+                        <strong>Success!</strong><br>
+                        Photo ID: ${data.photo_id}<br>
+                        Faces detected: ${data.faces_detected}<br>
+                        Persons matched: ${data.matched_persons?.map(p => 'Person #' + p.person_number).join(', ') || 'None'}<br>
+                        <br>
+                        <strong>Now go back to the camera scanner and try scanning your face!</strong>
+                    `;
+                } else {
+                    result.className = 'error';
+                    result.innerHTML = `Error: ${data.error || data.message || 'Unknown error'}`;
+                }
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

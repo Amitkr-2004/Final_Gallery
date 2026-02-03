@@ -11,6 +11,8 @@ from .models import Photo, Person, PersonPhoto, DailyStatistics
 from .serializers import ImageUploadSerializer, PhotoSerializer, PersonSerializer, DailyStatisticsSerializer
 from .utils import get_image_upload_path, detect_faces_from_file, detect_faces_and_extract_embeddings, update_daily_statistics
 from .faiss_manager import get_faiss_manager
+from .face_faiss_manager import get_face_faiss_manager
+from .gcs_service import sync_photo_to_gcs, is_gcs_configured
 import numpy as np
 
 # Configure logger for this module
@@ -88,9 +90,15 @@ def upload_image(request):
             # Only faces with sufficient confidence are processed (avoids duplicates from unclear faces)
             similarity_threshold = getattr(settings, 'FAISS_SIMILARITY_THRESHOLD', 0.7)
             faiss_manager = get_faiss_manager(similarity_threshold=similarity_threshold)
+            face_faiss_manager = get_face_faiss_manager(similarity_threshold=similarity_threshold)
             matched_persons = []
 
-            for embedding, confidence in quality_faces:
+            for face_data in quality_faces:
+                # Extract face data (new dict format)
+                embedding = face_data['embedding']
+                confidence = face_data['confidence']
+                bbox = face_data.get('bbox')
+
                 # Step 1: Compare with existing persons using FAISS
                 # find_or_create_person() checks if person already exists:
                 #   - If similarity >= threshold → returns existing person (is_new=False)
@@ -100,12 +108,22 @@ def upload_image(request):
                 # Step 2: Add image to person's collection (create PersonPhoto mapping)
                 # Whether person is existing or new, append this image to their collection
                 # get_or_create ensures UNIQUE(person, photo) - no duplicate mappings
+                # NOW ALSO stores face_embedding and face_bbox for face-level matching
                 try:
                     person_photo, created = PersonPhoto.objects.get_or_create(
                         person=person,
                         photo=existing_photo,
-                        defaults={'confidence': confidence}  # Save face detection confidence
+                        defaults={
+                            'confidence': confidence,
+                            'face_embedding': embedding,  # Store face embedding for face-level matching
+                            'face_bbox': bbox  # Store bounding box
+                        }
                     )
+                    # If record already existed but doesn't have embedding, update it
+                    if not created and person_photo.face_embedding is None:
+                        person_photo.face_embedding = embedding
+                        person_photo.face_bbox = bbox
+                        person_photo.save(update_fields=['face_embedding', 'face_bbox'])
                 except IntegrityError:
                     # Handle race condition: if duplicate detected at DB level, get existing record
                     person_photo = PersonPhoto.objects.get(
@@ -113,9 +131,15 @@ def upload_image(request):
                         photo=existing_photo
                     )
 
+                # Step 3: Add to face-level FAISS index for face-level matching
+                if created and embedding:
+                    face_faiss_manager.add_face_embedding(person_photo.id, embedding)
+                    logger.debug(f"[FACE_INDEX] Added PersonPhoto {person_photo.id} to face FAISS index")
+
                 matched_persons.append({
                     'person_id': person.id,
                     'person_number': person.person_number,
+                    'person_photo_id': person_photo.id,  # Include PersonPhoto ID for face-level tracking
                     'is_new': is_new,  # True if new person/collection created, False if existing
                     'detection_confidence': confidence  # Quality score of face detection
                 })
@@ -169,7 +193,7 @@ def upload_image(request):
         image_file.seek(0)  # Reset file pointer for face detection
         face_confidence_threshold = getattr(settings, 'FACE_DETECTION_CONFIDENCE_THRESHOLD', 0.5)
         quality_faces = detect_faces_from_file(image_file, min_confidence=face_confidence_threshold)
-        
+
         # Process each clearly detected face embedding with FAISS similarity matching
         # Logic: Upload Image → Detect Face(s) clearly → Compare with existing persons →
         #        • Match found → Append image to matched person's collection
@@ -177,24 +201,35 @@ def upload_image(request):
         # Only faces with sufficient confidence are processed (avoids duplicates from unclear faces)
         similarity_threshold = getattr(settings, 'FAISS_SIMILARITY_THRESHOLD', 0.7)
         faiss_manager = get_faiss_manager(similarity_threshold=similarity_threshold)
+        face_faiss_manager = get_face_faiss_manager(similarity_threshold=similarity_threshold)
         matched_persons = []
         skipped_faces = 0
-        
-        for embedding, confidence in quality_faces:
+
+        for face_data in quality_faces:
+            # Extract face data (new dict format)
+            embedding = face_data['embedding']
+            confidence = face_data['confidence']
+            bbox = face_data.get('bbox')
+
             # Step 1: Compare with existing persons using FAISS
             # find_or_create_person() checks if person already exists:
             #   - If similarity >= threshold → returns existing person (is_new=False)
             #   - If no match found → creates new person (is_new=True)
             person, is_new = faiss_manager.find_or_create_person(embedding)
-            
+
             # Step 2: Add image to person's collection (create PersonPhoto mapping)
             # Whether person is existing or new, append this image to their collection
             # get_or_create ensures UNIQUE(person, photo) - no duplicate mappings
+            # NOW ALSO stores face_embedding and face_bbox for face-level matching
             try:
                 person_photo, created = PersonPhoto.objects.get_or_create(
                     person=person,
                     photo=photo,
-                    defaults={'confidence': confidence}  # Save face detection confidence
+                    defaults={
+                        'confidence': confidence,
+                        'face_embedding': embedding,  # Store face embedding for face-level matching
+                        'face_bbox': bbox  # Store bounding box
+                    }
                 )
             except IntegrityError:
                 # Handle race condition: if duplicate detected at DB level, get existing record
@@ -202,10 +237,16 @@ def upload_image(request):
                     person=person,
                     photo=photo
                 )
-            
+
+            # Step 3: Add to face-level FAISS index for face-level matching
+            if created and embedding:
+                face_faiss_manager.add_face_embedding(person_photo.id, embedding)
+                logger.debug(f"[FACE_INDEX] Added PersonPhoto {person_photo.id} to face FAISS index")
+
             matched_persons.append({
                 'person_id': person.id,
                 'person_number': person.person_number,
+                'person_photo_id': person_photo.id,  # Include PersonPhoto ID for face-level tracking
                 'is_new': is_new,  # True if new person/collection created, False if existing
                 'detection_confidence': confidence  # Quality score of face detection
             })
@@ -222,6 +263,31 @@ def upload_image(request):
             # Log error but don't fail the upload
             logger.error(f"[STATISTICS] Failed to update statistics: {str(stats_error)}")
 
+        # SYNC TO GOOGLE CLOUD STORAGE
+        # Upload image and collection metadata to GCS (if configured)
+        gcs_sync_result = None
+        if is_gcs_configured():
+            try:
+                # Get list of Person objects that were matched
+                matched_person_objects = []
+                for mp in matched_persons:
+                    try:
+                        person = Person.objects.get(id=mp['person_id'])
+                        matched_person_objects.append(person)
+                    except Person.DoesNotExist:
+                        pass
+
+                # Sync to GCS
+                gcs_sync_result = sync_photo_to_gcs(
+                    photo=photo,
+                    local_image_path=image_path,
+                    matched_persons=matched_person_objects
+                )
+                logger.info(f"[GCS_SYNC] Photo {photo.id} synced to GCS: {gcs_sync_result}")
+            except Exception as gcs_error:
+                logger.error(f"[GCS_SYNC] Failed to sync photo {photo.id} to GCS: {str(gcs_error)}")
+                gcs_sync_result = {'success': False, 'error': str(gcs_error)}
+
         return Response({
             'photo_id': photo.id,
             'message': 'Photo uploaded successfully',
@@ -229,7 +295,8 @@ def upload_image(request):
             'faces_detected': len(quality_faces),
             'faces_processed': len(matched_persons),
             'matched_persons': matched_persons,
-            'confidence_threshold': face_confidence_threshold
+            'confidence_threshold': face_confidence_threshold,
+            'gcs_sync': gcs_sync_result
         }, status=status.HTTP_201_CREATED)
         
     except Exception as e:

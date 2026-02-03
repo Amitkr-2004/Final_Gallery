@@ -49,8 +49,9 @@ def detect_faces_and_extract_embeddings(image_path, min_confidence=0.5):
                        This avoids creating collections for unclear/blurry faces
 
     Returns:
-        List of tuples: [(embedding, confidence), ...]
-        Where embedding is a list of floats and confidence is detection confidence score
+        List of dicts: [{'embedding': [...], 'confidence': float, 'bbox': {...}}, ...]
+        Where embedding is a list of floats, confidence is detection score,
+        and bbox contains {x, y, width, height} of face in image
     """
     img = cv2.imread(image_path)
 
@@ -64,11 +65,28 @@ def detect_faces_and_extract_embeddings(image_path, min_confidence=0.5):
     quality_faces = []
     for face in faces:
         det_score = getattr(face, 'det_score', 1.0)  # Default to 1.0 if not available
-        
+
         # Only process faces with sufficient confidence/clarity
         if det_score >= min_confidence:
             embedding = face.embedding.tolist() if hasattr(face.embedding, 'tolist') else face.embedding
-            quality_faces.append((embedding, float(det_score)))
+
+            # Extract bounding box (InsightFace returns [x1, y1, x2, y2])
+            bbox = None
+            if hasattr(face, 'bbox') and face.bbox is not None:
+                box = face.bbox.tolist() if hasattr(face.bbox, 'tolist') else list(face.bbox)
+                if len(box) >= 4:
+                    bbox = {
+                        'x': int(box[0]),
+                        'y': int(box[1]),
+                        'width': int(box[2] - box[0]),
+                        'height': int(box[3] - box[1])
+                    }
+
+            quality_faces.append({
+                'embedding': embedding,
+                'confidence': float(det_score),
+                'bbox': bbox
+            })
         # Skip low-quality/unclear face detections to avoid duplicates
 
     return quality_faces
@@ -84,7 +102,7 @@ def detect_faces_from_file(image_file, min_confidence=0.5):
         min_confidence: Minimum detection confidence score (0.0 to 1.0)
 
     Returns:
-        List of tuples: [(embedding, confidence), ...]
+        List of dicts: [{'embedding': [...], 'confidence': float, 'bbox': {...}}, ...]
         Only includes faces detected with confidence >= min_confidence
     """
     import tempfile

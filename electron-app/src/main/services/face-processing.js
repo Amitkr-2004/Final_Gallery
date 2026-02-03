@@ -204,13 +204,62 @@ async function processImageFaces(imageId, imagePath) {
       total_faces: detectedFaces.length
     });
 
-    // Auto-sync image to GCS (don't wait, run in background)
+    // Auto-sync image to GCS (run in background but log results)
     if (gcsUpload && gcsUpload.isReady()) {
-      gcsUpload.syncImage(imageId).catch(err => {
-        logger.warn('Failed to auto-sync image to GCS', {
-          image_id: imageId,
-          error: err.message
+      logger.info('🔄 Starting auto-sync to GCS...', { image_id: imageId });
+
+      // Sync the image and its faces
+      gcsUpload.syncImage(imageId)
+        .then(async (result) => {
+          if (result.success) {
+            logger.info('✓ Image synced to GCS', {
+              image_id: imageId,
+              gcs_path: result.results?.image?.gcsPath
+            });
+
+            // Also sync the collection(s) that this image's faces belong to
+            const faceCollections = db.prepare(`
+              SELECT DISTINCT fcm.collection_id
+              FROM faces f
+              JOIN face_collection_members fcm ON f.face_id = fcm.face_id
+              WHERE f.image_id = ?
+            `).all(imageId);
+
+            for (const { collection_id } of faceCollections) {
+              try {
+                const collectionResult = await gcsUpload.uploadCollectionMetadata(collection_id);
+                if (collectionResult.success) {
+                  logger.info('✓ Collection synced to GCS', {
+                    collection_id,
+                    gcs_path: collectionResult.gcsPath
+                  });
+                }
+              } catch (collErr) {
+                logger.warn('Failed to sync collection', {
+                  collection_id,
+                  error: collErr.message
+                });
+              }
+            }
+          } else {
+            logger.warn('GCS sync returned error', {
+              image_id: imageId,
+              error: result.error
+            });
+          }
+        })
+        .catch(err => {
+          logger.error('Failed to auto-sync image to GCS', {
+            image_id: imageId,
+            error: err.message,
+            stack: err.stack
+          });
         });
+    } else {
+      logger.info('GCS sync skipped (not ready)', {
+        image_id: imageId,
+        gcsUploadExists: !!gcsUpload,
+        isReady: gcsUpload ? gcsUpload.isReady() : false
       });
     }
   } catch (error) {

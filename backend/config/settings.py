@@ -154,12 +154,15 @@ REST_FRAMEWORK = {
 }
 
 # CORS settings
+# Allow all origins for development (camera-scanner.html opened from file://)
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
-
-CORS_ALLOW_CREDENTIALS = True
 
 # FAISS Configuration
 FAISS_SIMILARITY_THRESHOLD = float(os.getenv('FAISS_SIMILARITY_THRESHOLD', '0.7'))

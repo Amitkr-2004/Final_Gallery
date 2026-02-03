@@ -134,6 +134,7 @@ class PersonPhoto(models.Model):
     - One person can have many photos (many-to-many via this mapping table)
     - No duplicate mappings allowed (enforced by unique_together constraint)
     - This is the ONLY way to associate photos with persons
+    - Each link stores the specific face embedding for that detection
     """
     id = models.AutoField(primary_key=True)
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='person_photos')
@@ -146,6 +147,21 @@ class PersonPhoto(models.Model):
         db_index=True,
         validators=[MinValueValidator(0.0)],
         help_text="Face detection confidence score (0.0-1.0). Higher = better quality."
+    )
+
+    # Face-level embedding for this specific detection
+    # This allows matching at face level, not just person level
+    face_embedding = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="512D face embedding vector for this specific face detection"
+    )
+
+    # Bounding box for the face in this photo (optional, for visualization)
+    face_bbox = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Bounding box {x, y, width, height} of face in photo"
     )
 
     class Meta:

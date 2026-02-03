@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Camera Face Scanner</title>
+    <title>Live Camera Face Scanner - InsightFace</title>
     <style>
         * {
             margin: 0;
@@ -39,6 +39,20 @@
             color: #666;
             margin-bottom: 30px;
             font-size: 1.1em;
+        }
+
+        .model-badge {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .model-badge span {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
         }
 
         .grid {
@@ -353,15 +367,19 @@
 </head>
 <body>
     <div class="container">
-        <h1>📹 Live Camera Face Scanner</h1>
-        <p class="subtitle">Scan your face instantly and find matching collections</p>
+        <h1>Live Camera Face Scanner</h1>
+        <p class="subtitle">Powered by InsightFace (512D ArcFace embeddings)</p>
+
+        <div class="model-badge">
+            <span>InsightFace buffalo_l + FAISS Vector Search</span>
+        </div>
 
         <div id="apiStatus" class="api-status">Checking API connection...</div>
 
         <div class="grid">
             <div class="camera-section">
                 <div class="section-title">
-                    <span>📷</span>
+                    <span></span>
                     <span>Camera</span>
                 </div>
 
@@ -382,12 +400,12 @@
 
             <div class="results-section">
                 <div class="section-title">
-                    <span>🎯</span>
+                    <span></span>
                     <span>Results</span>
                 </div>
                 <div id="results">
                     <div class="no-matches">
-                        <div class="no-matches-icon">👤</div>
+                        <div class="no-matches-icon"></div>
                         <div>Start camera and scan to see results</div>
                     </div>
                 </div>
@@ -407,22 +425,23 @@
         const apiStatusDiv = document.getElementById('apiStatus');
         const faceGuide = document.getElementById('faceGuide');
 
-        const API_URL = 'http://localhost:3001';
+        // Django backend with InsightFace
+        const API_URL = 'http://localhost:8000';
         let stream = null;
 
         // Check API status
         async function checkAPI() {
             try {
-                const response = await fetch(`${API_URL}/health`);
+                const response = await fetch(`${API_URL}/api/health/`);
                 const data = await response.json();
 
-                if (data.status === 'ok') {
-                    apiStatusDiv.textContent = '✅ API Connected - Ready to scan';
+                if (data.status === 'ok' || data.success) {
+                    apiStatusDiv.textContent = 'API Connected (InsightFace + FAISS)';
                     apiStatusDiv.className = 'api-status connected';
                     return true;
                 }
             } catch (error) {
-                apiStatusDiv.textContent = '❌ API Server Not Running - Start the enhanced API server first';
+                apiStatusDiv.textContent = 'Django Server Not Running - Start with: python manage.py runserver';
                 apiStatusDiv.className = 'api-status disconnected';
                 return false;
             }
@@ -445,35 +464,34 @@
                 scanBtn.disabled = false;
                 stopBtn.disabled = false;
 
-                // Activate face guide (turn green)
                 faceGuide.classList.add('active');
 
-                statusDiv.textContent = '📸 Camera active - Position your face in the circle';
+                statusDiv.textContent = 'Camera active - Position your face in the circle';
                 statusDiv.className = 'status ready';
             } catch (error) {
-                statusDiv.textContent = '❌ Camera access denied';
+                statusDiv.textContent = 'Camera access denied';
                 statusDiv.className = 'status error';
                 alert('Camera access denied. Please allow camera access and try again.');
             }
         });
 
-        // Scan face
+        // Scan face using InsightFace API
         scanBtn.addEventListener('click', async () => {
             const apiOk = await checkAPI();
             if (!apiOk) {
-                alert('API server not running. Start it with: node api-server-enhanced.js');
+                alert('Django server not running. Start it with: python manage.py runserver');
                 return;
             }
 
             try {
                 scanBtn.disabled = true;
-                statusDiv.textContent = '🔍 Scanning and matching...';
+                statusDiv.textContent = 'Scanning with InsightFace...';
                 statusDiv.className = 'status scanning';
 
                 resultsDiv.innerHTML = `
                     <div class="loading">
                         <div class="spinner"></div>
-                        <div>Detecting face and searching collections...</div>
+                        <div>Detecting face with InsightFace (512D ArcFace)...</div>
                     </div>
                 `;
 
@@ -485,13 +503,11 @@
                 // Convert to blob
                 const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
 
-                // Upload to API
+                // Upload to Django InsightFace API
                 const formData = new FormData();
                 formData.append('image', blob, 'camera-capture.jpg');
-                formData.append('threshold', '0.65');  // 65% similarity - strict but realistic
-                formData.append('limit', '10');
 
-                const response = await fetch(`${API_URL}/api/scanner/match`, {
+                const response = await fetch(`${API_URL}/api/collection/scan-face/`, {
                     method: 'POST',
                     body: formData
                 });
@@ -499,29 +515,34 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    displayResults(result);
-                    statusDiv.textContent = '✅ Scan complete - Ready for next scan';
+                    if (result.matched) {
+                        // Fetch photos for this person
+                        await displayMatchedResults(result);
+                    } else {
+                        displayNoMatch(result);
+                    }
+                    statusDiv.textContent = 'Scan complete - Ready for next scan';
                     statusDiv.className = 'status ready';
                 } else {
-                    statusDiv.textContent = '❌ ' + (result.error || 'Scan failed');
+                    statusDiv.textContent = result.message || 'Scan failed';
                     statusDiv.className = 'status error';
                     resultsDiv.innerHTML = `
                         <div class="no-matches">
-                            <div class="no-matches-icon">❌</div>
-                            <div><strong>Error</strong></div>
-                            <div style="margin-top: 10px;">${result.error || 'Scan failed'}</div>
+                            <div class="no-matches-icon"></div>
+                            <div><strong>${result.stage || 'Error'}</strong></div>
+                            <div style="margin-top: 10px;">${result.message || 'Scan failed'}</div>
                         </div>
                     `;
                 }
 
             } catch (error) {
-                statusDiv.textContent = '❌ Error: ' + error.message;
+                statusDiv.textContent = 'Error: ' + error.message;
                 statusDiv.className = 'status error';
                 resultsDiv.innerHTML = `
                     <div class="no-matches">
-                        <div class="no-matches-icon">❌</div>
+                        <div class="no-matches-icon"></div>
                         <div><strong>Connection Error</strong></div>
-                        <div style="margin-top: 10px;">Make sure the API server is running on port 3001</div>
+                        <div style="margin-top: 10px;">Make sure Django server is running on port 8000</div>
                     </div>
                 `;
             } finally {
@@ -540,7 +561,6 @@
                 scanBtn.disabled = true;
                 stopBtn.disabled = true;
 
-                // Deactivate face guide (turn back to blue)
                 faceGuide.classList.remove('active');
 
                 statusDiv.textContent = 'Camera stopped';
@@ -548,101 +568,162 @@
             }
         });
 
-        function displayResults(result) {
-            const { scanned_face, matches, stats } = result;
-            const confidence = (scanned_face.confidence * 100).toFixed(1);
+        async function displayMatchedResults(result) {
+            const { person, matches, total_matched_photos, collections_matched, confidence, detection_confidence, threshold_used } = result;
+            const confidencePercent = (confidence * 100).toFixed(1);
+            const detectionPercent = detection_confidence ? (detection_confidence * 100).toFixed(1) : 'N/A';
+            const thresholdPercent = threshold_used ? (threshold_used * 100).toFixed(0) : '85';
 
-            // ONLY use the TOP match (highest similarity), not all matches
-            const topMatch = matches.length > 0 ? matches[0] : null;
+            // Use new API response fields
+            const totalPhotosInCollection = person.total_photos_in_collection || person.total_photos || 0;
+            const matchedPhotosCount = total_matched_photos || matches?.length || 0;
 
-            let uniqueImages = [];
-            let imageCount = 0;
-            let bestSimilarity = 0;
-            let matchedCollections = [];
-
-            if (topMatch) {
-                // Only show images from the best matching collection
-                uniqueImages = topMatch.image_ids || [];
-                imageCount = uniqueImages.length;
-                bestSimilarity = topMatch.match.similarity * 100;
-                matchedCollections = [{
-                    name: topMatch.collection_name,
-                    similarity: bestSimilarity.toFixed(1)
-                }];
+            // Determine match quality based on confidence
+            let matchQuality = 'Excellent';
+            let bgColor = '#48bb78';
+            if (confidence < 0.95) {
+                matchQuality = 'Good';
+                bgColor = '#38a169';
+            }
+            if (confidence < 0.90) {
+                matchQuality = 'Moderate';
+                bgColor = '#f6ad55';
+            }
+            if (confidence < 0.85) {
+                matchQuality = 'Low';
+                bgColor = '#fc8181';
             }
 
             let html = `
                 <div class="stats-grid">
                     <div class="stat-box">
-                        <div class="stat-label">Face Confidence</div>
-                        <div class="stat-value">${confidence}%</div>
+                        <div class="stat-label">Match Similarity</div>
+                        <div class="stat-value">${confidencePercent}%</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-label">Best Match</div>
-                        <div class="stat-value">${bestSimilarity.toFixed(1)}%</div>
+                        <div class="stat-label">Detection Quality</div>
+                        <div class="stat-value">${detectionPercent}%</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-label">Unique Images</div>
-                        <div class="stat-value">${imageCount}</div>
+                        <div class="stat-label">Matched Photos</div>
+                        <div class="stat-value">${matchedPhotosCount}</div>
+                    </div>
+                </div>
+
+                <div class="match-card">
+                    <div class="match-header">
+                        <div class="match-name">Matched: Person #${person.person_number}</div>
+                        <div class="similarity-badge" style="background: ${bgColor}">
+                            ${matchQuality}
+                        </div>
+                    </div>
+                    ${person.face_image_url ? `
+                    <div style="margin: 15px 0; text-align: center;">
+                        <p style="margin-bottom: 10px; color: #4a5568; font-size: 0.9em;">Best matched face from database:</p>
+                        <img src="${API_URL}${person.face_image_url}"
+                             alt="Matched Person"
+                             style="max-width: 150px; border-radius: 10px; border: 3px solid ${bgColor}; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                             onerror="this.style.display='none'">
+                    </div>
+                    ` : ''}
+                    <div class="match-details">
+                        <strong>Face-Level Match Details:</strong><br>
+                        Collection ID: <strong>${person.id}</strong> (Person #${person.person_number})<br>
+                        Best Similarity: <strong>${confidencePercent}%</strong> (threshold: ${thresholdPercent}%)<br>
+                        Face Detection: ${detectionPercent}% confidence<br>
+                        Photos with Your Face: <strong>${matchedPhotosCount}</strong><br>
+                        Total in Collection: <strong>${totalPhotosInCollection}</strong><br>
+                    </div>
+            `;
+
+            // Display matched photos directly from the matches array (face-level results)
+            if (matches && matches.length > 0) {
+                html += `
+                    <div style="margin-top: 15px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                        <strong style="color: #2d3748;">Photos Containing Your Face (${matches.length} found):</strong>
+                        <div class="images-gallery" style="margin-top: 12px;">
+                          ${matches.map((match, i) => `
+                            <div class="gallery-image" style="position: relative;" onclick="window.open('${API_URL}${match.image_url}', '_blank')">
+                              <img src="${API_URL}${match.image_url}"
+                                   alt="Photo ${i + 1}"
+                                   onerror="this.parentElement.innerHTML='<div class=\\'image-loading\\'>Image unavailable</div>'"
+                                   loading="lazy"
+                                   title="Face ID: ${match.face_id} | Image ID: ${match.image_id} | Similarity: ${(match.similarity * 100).toFixed(1)}%">
+                              <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 5px; font-size: 0.75em; text-align: center;">
+                                ${(match.similarity * 100).toFixed(1)}% match
+                              </div>
+                            </div>
+                          `).join('')}
+                        </div>
+                        <div style="margin-top: 10px; font-size: 0.8em; color: #718096;">
+                            <strong>Debug Info:</strong> Face IDs: [${matches.map(m => m.face_id).join(', ')}] | Image IDs: [${matches.map(m => m.image_id).join(', ')}]
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function displayNoMatch(result) {
+            const confidence = result.confidence || 0;
+            const confidencePercent = (confidence * 100).toFixed(1);
+            const dbStatus = result.database_status || {};
+            // Support both old (total_persons) and new (total_face_embeddings) API response
+            const totalFaces = dbStatus.total_face_embeddings || dbStatus.total_persons || 0;
+            const thresholdRequired = dbStatus.threshold_required || 0.85;
+
+            // Determine status icon and color
+            let statusIcon = '';
+            let statusColor = '#f6ad55';
+            let statusText = 'Not Found';
+
+            if (dbStatus.status === 'empty') {
+                statusIcon = '';
+                statusColor = '#667eea';
+                statusText = 'Empty DB';
+            } else if (dbStatus.status === 'below_threshold') {
+                statusIcon = '';
+                statusColor = '#fc8181';
+                statusText = 'No Match';
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Best Similarity</div>
+                        <div class="stat-value">${confidencePercent}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Status</div>
+                        <div class="stat-value" style="font-size: 1.2em; color: ${statusColor};">${statusText}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Faces in DB</div>
+                        <div class="stat-value">${totalFaces}</div>
+                    </div>
+                </div>
+
+                <div class="no-matches">
+                    <div class="no-matches-icon">${statusIcon}</div>
+                    <div><strong>${dbStatus.status === 'empty' ? 'Database Empty' : 'Face Not Recognized'}</strong></div>
+                    <div style="margin-top: 15px; font-size: 0.95em; color: #4a5568;">
+                        ${result.message || 'Your face was not found in the database.'}
+                    </div>
+                    <div style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; text-align: left;">
+                        <strong style="color: #2d3748;">What to do:</strong>
+                        <ul style="margin-top: 10px; margin-left: 20px; color: #4a5568; line-height: 1.8;">
+                            <li>Upload your photos to events first</li>
+                            <li>Make sure your face is clearly visible in uploaded photos</li>
+                            <li>Try scanning again with better lighting</li>
+                        </ul>
+                    </div>
+                    <div style="margin-top: 15px; font-size: 0.8em; color: #a0aec0;">
+                        Matching threshold: ${(thresholdRequired * 100).toFixed(0)}% similarity required
                     </div>
                 </div>
             `;
-
-            if (matches.length === 0) {
-                html += `
-                    <div class="no-matches">
-                        <div class="no-matches-icon">🤔</div>
-                        <div><strong>No Matches Found</strong></div>
-                        <div style="margin-top: 10px; font-size: 0.9em;">
-                            Your face doesn't match any collections.<br>
-                            Try adjusting threshold or ensure you're in the database.
-                        </div>
-                    </div>
-                `;
-            } else {
-                // Show unified result with all unique images
-                let bgColor = '#48bb78';
-                if (bestSimilarity < 70) bgColor = '#fc8181';
-                else if (bestSimilarity < 80) bgColor = '#f6ad55';
-
-                html += `
-                    <div class="match-card">
-                        <div class="match-header">
-                            <div class="match-name">Your Photos</div>
-                            <div class="similarity-badge" style="background: ${bgColor}">
-                                ${bestSimilarity.toFixed(1)}%
-                            </div>
-                        </div>
-                        <div class="match-details">
-                            🎯 Best matching collection: <strong>${matchedCollections[0].name}</strong><br>
-                            🖼️ <strong>${imageCount}</strong> images where you appear<br>
-                            📊 Match confidence: ${matchedCollections[0].similarity}%<br>
-                        </div>
-                `;
-
-                if (uniqueImages.length > 0) {
-                    html += `
-                        <div style="margin-top: 15px; padding: 15px; background: #f7fafc; border-radius: 8px;">
-                            <strong style="color: #2d3748;">🖼️ Images where you appear (${imageCount} total):</strong>
-                            <div class="images-gallery" style="margin-top: 12px;">
-                              ${uniqueImages.map((id, i) => `
-                                <div class="gallery-image" onclick="window.open('${API_URL}/api/images/${id}', '_blank')">
-                                  <img src="${API_URL}/api/images/${id}"
-                                       alt="Photo ${i + 1}"
-                                       onerror="this.parentElement.innerHTML='<div class=\\'image-loading\\'>Loading...</div>'"
-                                       loading="lazy"
-                                       title="Click to view full size">
-                                </div>
-                              `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                html += '</div>';
-            }
-
-            resultsDiv.innerHTML = html;
         }
 
         // Check API on load

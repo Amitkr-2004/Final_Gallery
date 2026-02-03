@@ -361,9 +361,19 @@ def register_upload(request):
     {
         "success": true,
         "image_id": 123,
-        "message": "Image registered successfully"
+        "message": "Image registered successfully",
+        "faces_detected": 2,
+        "collections_created": 1
     }
     """
+    from .models import Photo, Person, PersonPhoto
+    from .utils import detect_faces_and_extract_embeddings
+    from .faiss_manager import get_faiss_manager
+    from .gcs_service import upload_collection_metadata_to_gcs, upload_embedding_to_gcs
+    from django.db import IntegrityError
+    import tempfile
+    import requests
+
     try:
         # Extract parameters
         gcs_path = request.data.get('gcs_path')
@@ -382,29 +392,103 @@ def register_upload(request):
                 'required': ['gcs_path', 'original_filename', 'file_size', 'md5_hash']
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # TODO: Store in your database (Photo model or similar)
-        # This is a placeholder - implement based on your Photo model
-        # Example:
-        # from .models import Photo
-        # photo = Photo.objects.create(
-        #     gcs_path=gcs_path,
-        #     original_filename=original_filename,
-        #     file_size=file_size,
-        #     content_type=content_type,
-        #     image_hash=md5_hash,
-        #     event_id=event_id,
-        #     user_id=user_id,
-        #     upload_date=upload_date,
-        #     status='uploaded'
-        # )
+        # Check if photo already exists (by hash)
+        existing_photo = Photo.objects.filter(image_hash=md5_hash).first()
+        if existing_photo:
+            return Response({
+                'success': True,
+                'image_id': existing_photo.id,
+                'message': 'Photo already registered (duplicate)',
+                'gcs_path': gcs_path,
+                'is_duplicate': True
+            }, status=status.HTTP_200_OK)
 
-        logger.info(f"Registered upload: {gcs_path}")
+        # Create Photo record with GCS path
+        photo = Photo.objects.create(
+            file_path=gcs_path,  # Store GCS path as file_path
+            image_hash=md5_hash,
+            event_id=event_id,
+            status='processing'
+        )
+
+        logger.info(f"Created Photo record: {photo.id} for GCS path: {gcs_path}")
+
+        # Download image from GCS temporarily for face detection
+        faces_detected = 0
+        matched_persons = []
+
+        try:
+            # Get GCS bucket and download image
+            bucket_name = os.getenv('GCS_BUCKET_NAME')
+            if bucket_name:
+                client = get_gcs_client()
+                bucket = client.bucket(bucket_name)
+                blob = bucket.blob(gcs_path)
+
+                # Download to temp file
+                with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                    blob.download_to_filename(temp_file.name)
+                    temp_path = temp_file.name
+
+                try:
+                    # Detect faces
+                    face_confidence_threshold = getattr(settings, 'FACE_DETECTION_CONFIDENCE_THRESHOLD', 0.5)
+                    quality_faces = detect_faces_and_extract_embeddings(temp_path, min_confidence=face_confidence_threshold)
+                    faces_detected = len(quality_faces)
+
+                    # Process faces with FAISS
+                    similarity_threshold = getattr(settings, 'FAISS_SIMILARITY_THRESHOLD', 0.7)
+                    faiss_manager = get_faiss_manager(similarity_threshold=similarity_threshold)
+
+                    for embedding, confidence in quality_faces:
+                        person, is_new = faiss_manager.find_or_create_person(embedding)
+
+                        try:
+                            person_photo, created = PersonPhoto.objects.get_or_create(
+                                person=person,
+                                photo=photo,
+                                defaults={'confidence': confidence}
+                            )
+                        except IntegrityError:
+                            person_photo = PersonPhoto.objects.get(person=person, photo=photo)
+
+                        matched_persons.append({
+                            'person_id': person.id,
+                            'person_number': person.person_number,
+                            'is_new': is_new,
+                            'confidence': confidence
+                        })
+
+                        # Sync new person to GCS
+                        if is_new:
+                            upload_embedding_to_gcs(person)
+
+                        # Update collection metadata in GCS
+                        person_photos = PersonPhoto.objects.filter(person=person)
+                        upload_collection_metadata_to_gcs(person, person_photos)
+
+                finally:
+                    # Clean up temp file
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
+
+        except Exception as face_error:
+            logger.error(f"Face detection failed for {gcs_path}: {face_error}")
+
+        # Update photo status
+        photo.status = 'completed'
+        photo.save()
+
+        logger.info(f"Registered upload: {gcs_path} with {faces_detected} faces")
 
         return Response({
             'success': True,
-            'image_id': None,  # TODO: Return actual photo.id
-            'message': 'Image registered successfully',
-            'gcs_path': gcs_path
+            'image_id': photo.id,
+            'message': 'Image registered and processed successfully',
+            'gcs_path': gcs_path,
+            'faces_detected': faces_detected,
+            'faces_processed': len(matched_persons),
+            'matched_persons': matched_persons
         }, status=status.HTTP_201_CREATED)
 
     except Exception as e:

@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const MODELS_DIR = path.join(__dirname, '..', 'models', 'face-api');
-const BASE_URL = 'https://unpkg.com/face-api.js@0.22.2/weights';
+const BASE_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
 
 // Models files
 const MODELS = [

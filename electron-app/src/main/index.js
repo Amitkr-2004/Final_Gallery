@@ -351,6 +351,8 @@ async function initializeApp() {
     setTimeout(async () => {
       try {
         const faceProcessing = require('./services/face-processing');
+        const gcsUpload = require('./services/gcs-upload');
+
         const pendingImages = db.prepare(`
           SELECT COUNT(*) as count FROM images
           WHERE processing_status = 'pending' OR processing_status IS NULL
@@ -362,27 +364,36 @@ async function initializeApp() {
           const result = await faceProcessing.batchProcessImages();
           logger.info('✓ Auto-processing complete', result);
 
-          // Auto-sync to GCS after processing
-          setTimeout(async () => {
-            try {
-              const gcsUpload = require('./services/gcs-upload');
-              if (gcsUpload.isReady()) {
-                logger.info('🔄 Auto-syncing to GCS...');
-                const syncResult = await gcsUpload.syncAllCollections();
-                logger.info('✓ Collections auto-synced', syncResult.stats);
-
-                const batchSyncResult = await gcsUpload.batchSync();
-                logger.info('✓ Images auto-synced', batchSyncResult.stats);
-              }
-            } catch (syncError) {
-              logger.error('Auto-sync failed', { error: syncError.message, stack: syncError.stack });
-            }
-          }, 2000); // Wait 2 seconds after processing
+          // Wait for processing to complete before syncing
+          await new Promise(resolve => setTimeout(resolve, 2000));
         } else {
           logger.info('No pending images to process');
         }
+
+        // Always check for unsynced images and sync them
+        if (gcsUpload.isReady()) {
+          const unsyncedImages = db.prepare(`
+            SELECT COUNT(*) as count FROM images
+            WHERE processing_status = 'completed' AND (sync_status IS NULL OR sync_status = 'pending' OR sync_status = 'uploading')
+          `).get();
+
+          if (unsyncedImages && unsyncedImages.count > 0) {
+            logger.info('🔄 Auto-syncing unsynced images to GCS...', { count: unsyncedImages.count });
+
+            const batchSyncResult = await gcsUpload.batchSync();
+            logger.info('✓ Images auto-synced', batchSyncResult.stats);
+
+            // Also sync collections
+            const syncResult = await gcsUpload.syncAllCollections();
+            logger.info('✓ Collections auto-synced', syncResult.stats);
+          } else {
+            logger.info('All images already synced to GCS');
+          }
+        } else {
+          logger.info('GCS not ready, skipping auto-sync');
+        }
       } catch (error) {
-        logger.error('Auto-processing failed', { error: error.message, stack: error.stack });
+        logger.error('Auto-processing/sync failed', { error: error.message, stack: error.stack });
       }
     }, 5000); // Wait 5 seconds after startup
 

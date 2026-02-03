@@ -7,6 +7,49 @@ const { getDatabase } = require('../database/schema');
 const fs = require('fs').promises;
 const path = require('path');
 
+// Django API URL for syncing deletions (use 127.0.0.1 instead of localhost to avoid IPv6 issues)
+const DJANGO_API_URL = 'http://127.0.0.1:8000';
+
+/**
+ * Call Django API to delete a photo (syncs deletion to GCS via Django)
+ */
+async function syncDeleteToDjango(imageHash, logger) {
+  try {
+    // First, find the photo in Django by hash
+    const response = await fetch(`${DJANGO_API_URL}/api/photos/`);
+    if (!response.ok) {
+      logger.warn('Could not fetch photos from Django for sync delete');
+      return { success: false, error: 'Django API not available' };
+    }
+
+    const photos = await response.json();
+    const djangoPhoto = photos.find(p => p.image_hash === imageHash);
+
+    if (!djangoPhoto) {
+      logger.info('Photo not found in Django (may not have been uploaded there)', { imageHash });
+      return { success: true, message: 'Photo not in Django' };
+    }
+
+    // Delete from Django (which will also delete from GCS)
+    const deleteResponse = await fetch(`${DJANGO_API_URL}/api/photos/${djangoPhoto.id}/`, {
+      method: 'DELETE'
+    });
+
+    if (deleteResponse.ok) {
+      const result = await deleteResponse.json();
+      logger.info('Photo deleted from Django and GCS', { photoId: djangoPhoto.id, result });
+      return { success: true, result };
+    } else {
+      const error = await deleteResponse.text();
+      logger.warn('Failed to delete from Django', { photoId: djangoPhoto.id, error });
+      return { success: false, error };
+    }
+  } catch (error) {
+    logger.warn('Could not sync delete to Django (server may be offline)', { error: error.message });
+    return { success: false, error: error.message };
+  }
+}
+
 function registerGalleryHandlers(ipcMain, getService) {
   /**
    * Get all uploaded files
@@ -144,7 +187,14 @@ function registerGalleryHandlers(ipcMain, getService) {
   ipcMain.handle('core:gallery:delete-file', async (event, fileId) => {
     const db = getDatabase();
     const logger = getService('logger');
-    const gcsUpload = getService('gcsUpload');
+
+    // Get gcsUpload service safely (may not be initialized)
+    let gcsUpload = null;
+    try {
+      gcsUpload = getService('gcsUpload');
+    } catch (e) {
+      logger.warn('GCS Upload service not available', { error: e.message });
+    }
 
     try {
       // Get file info from database
@@ -168,15 +218,22 @@ function registerGalleryHandlers(ipcMain, getService) {
         WHERE image_path = ?
       `).get(file.filepath);
 
-      // Delete from GCS if image exists and has GCS path
+      // SYNC DELETE TO DJANGO (this will delete from Django's DB and GCS)
+      // Django is the single source of truth for GCS operations
+      if (file.file_hash) {
+        const djangoResult = await syncDeleteToDjango(file.file_hash, logger);
+        logger.info('Django sync result', djangoResult);
+      }
+
+      // Also delete from Electron's own GCS connection as fallback
       if (image && image.gcs_path && gcsUpload && gcsUpload.isReady()) {
         try {
           // Delete image from GCS
           const gcsPath = image.gcs_path.replace(`gs://${process.env.GCS_BUCKET_NAME}/`, '');
           await gcsUpload.deleteImageFromGCS(gcsPath);
-          logger.info('Image deleted from GCS', { gcsPath });
+          logger.info('Image deleted from GCS (Electron)', { gcsPath });
         } catch (error) {
-          logger.warn('Failed to delete image from GCS', {
+          logger.warn('Failed to delete image from GCS via Electron', {
             gcsPath: image.gcs_path,
             error: error.message
           });
@@ -227,14 +284,28 @@ function registerGalleryHandlers(ipcMain, getService) {
     const configService = getService('configService');
 
     try {
-      // Get all files from database
-      const files = db.prepare('SELECT filepath FROM uploaded_files').all();
+      // Get all files from database (including file_hash for Django sync)
+      const files = db.prepare('SELECT filepath, file_hash FROM uploaded_files').all();
 
       let deletedCount = 0;
       let failedCount = 0;
+      let djangoSynced = 0;
 
-      // Delete all files from filesystem
+      // Delete all files and sync to Django
       for (const file of files) {
+        // Sync delete to Django (which will delete from GCS)
+        if (file.file_hash) {
+          try {
+            const djangoResult = await syncDeleteToDjango(file.file_hash, logger);
+            if (djangoResult.success) {
+              djangoSynced++;
+            }
+          } catch (error) {
+            logger.warn('Failed to sync delete to Django', { error: error.message });
+          }
+        }
+
+        // Delete from filesystem
         try {
           await fs.unlink(file.filepath);
           deletedCount++;
@@ -247,9 +318,13 @@ function registerGalleryHandlers(ipcMain, getService) {
         }
       }
 
-      // Clear database
+      // Clear database tables
       db.prepare('DELETE FROM uploaded_files').run();
-      logger.info('Gallery cleared', { deletedCount, failedCount, totalFiles: files.length });
+      db.prepare('DELETE FROM images').run();
+      db.prepare('DELETE FROM faces').run();
+      db.prepare('DELETE FROM face_collection_members').run();
+      db.prepare('DELETE FROM face_collections').run();
+      logger.info('Gallery cleared', { deletedCount, failedCount, djangoSynced, totalFiles: files.length });
 
       return {
         success: true,

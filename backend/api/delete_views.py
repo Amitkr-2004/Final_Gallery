@@ -1,5 +1,6 @@
 """
 Delete endpoints for photos and collections.
+Handles deletion from local storage AND Google Cloud Storage.
 """
 from django.db import transaction
 from django.conf import settings
@@ -9,6 +10,13 @@ from rest_framework import status
 import os
 from .models import Photo, Person, PersonPhoto
 from .faiss_manager import get_faiss_manager
+from .gcs_service import (
+    delete_image_from_gcs,
+    delete_collection_from_gcs,
+    delete_embedding_from_gcs,
+    upload_collection_metadata_to_gcs,
+    is_gcs_configured
+)
 
 
 @api_view(['DELETE'])
@@ -46,7 +54,7 @@ def delete_photo(request, photo_id):
             # Step 3: Remove all PersonPhoto relationships (cascade will handle this, but explicit for clarity)
             person_photos.delete()
             
-            # Step 4: Delete image file from storage
+            # Step 4: Delete image file from local storage
             image_path = os.path.join(settings.MEDIA_ROOT, photo.file_path)
             if os.path.exists(image_path):
                 try:
@@ -54,6 +62,14 @@ def delete_photo(request, photo_id):
                 except OSError as e:
                     # Log error but don't fail transaction if file already deleted
                     print(f"Warning: Could not delete file {image_path}: {e}")
+
+            # Step 4b: Delete image from Google Cloud Storage
+            gcs_deleted = False
+            gcs_error = None
+            if is_gcs_configured():
+                gcs_result = delete_image_from_gcs(photo)
+                gcs_deleted = gcs_result['success']
+                gcs_error = gcs_result.get('error')
             
             # Step 5: Delete photo record from database
             photo_id_deleted = photo.id
@@ -62,34 +78,46 @@ def delete_photo(request, photo_id):
             # Step 6: Handle empty collections
             deleted_collections = []
             delete_empty = getattr(settings, 'DELETE_EMPTY_COLLECTIONS', 'delete').lower() == 'delete'
-            
+
             for person in linked_persons:
                 # Check if collection is now empty
                 remaining_photos_count = PersonPhoto.objects.filter(person=person).count()
-                
+
                 if remaining_photos_count == 0 and delete_empty:
                     # Collection is empty and we should delete it
                     person_id_to_delete = person.id
                     person_number = person.person_number
-                    
-                    # Delete person/collection first
+
+                    # Delete from GCS first (before deleting from DB)
+                    if is_gcs_configured():
+                        delete_collection_from_gcs(person_id_to_delete)
+                        delete_embedding_from_gcs(person_id_to_delete)
+
+                    # Delete person/collection from database
                     person.delete()
-                    
+
                     # Remove from FAISS index (after person is deleted)
                     faiss_manager = get_faiss_manager()
                     faiss_manager.remove_embedding(person_id_to_delete)
-                    
+
                     deleted_collections.append({
                         'person_id': person_id_to_delete,
                         'person_number': person_number
                     })
-            
+                else:
+                    # Collection still has photos - update GCS metadata
+                    if is_gcs_configured() and remaining_photos_count > 0:
+                        person_photos = PersonPhoto.objects.filter(person=person)
+                        upload_collection_metadata_to_gcs(person, person_photos)
+
             return Response({
                 'message': 'Photo deleted successfully',
                 'photo_id': photo_id_deleted,
                 'removed_from_collections': len(linked_persons),
                 'empty_collections_deleted': len(deleted_collections),
-                'deleted_collections': deleted_collections
+                'deleted_collections': deleted_collections,
+                'gcs_deleted': gcs_deleted,
+                'gcs_error': gcs_error
             }, status=status.HTTP_200_OK)
             
     except Exception as e:
@@ -155,13 +183,17 @@ def delete_person(request, person_id):
                 if photo.id in processed_photo_ids:
                     continue
                 processed_photo_ids.add(photo.id)
-                
+
                 # Check if photo is linked to any other persons AFTER removing this person's links
                 remaining_links = PersonPhoto.objects.filter(photo=photo).count()
-                
+
                 if remaining_links == 0:
                     # Photo is no longer linked to any person, delete it completely
-                    # Delete image file first
+                    # Delete from GCS first
+                    if is_gcs_configured():
+                        delete_image_from_gcs(photo)
+
+                    # Delete image file from local storage
                     image_path = os.path.join(settings.MEDIA_ROOT, photo.file_path)
                     if os.path.exists(image_path):
                         try:
@@ -169,7 +201,7 @@ def delete_person(request, person_id):
                             deleted_files.append(photo.file_path)
                         except OSError as e:
                             print(f"Warning: Could not delete file {image_path}: {e}")
-                    
+
                     # Delete photo record
                     deleted_photos.append({
                         'photo_id': photo.id,
@@ -177,20 +209,31 @@ def delete_person(request, person_id):
                     })
                     photo.delete()
             
-            # Step 5: Delete person/collection record first
+            # Step 5: Delete collection and embedding from GCS
+            gcs_collection_deleted = False
+            gcs_embedding_deleted = False
+            if is_gcs_configured():
+                coll_result = delete_collection_from_gcs(person_id)
+                gcs_collection_deleted = coll_result['success']
+                embed_result = delete_embedding_from_gcs(person_id)
+                gcs_embedding_deleted = embed_result['success']
+
+            # Step 6: Delete person/collection record from database
             person.delete()
-            
-            # Step 6: Remove from FAISS index (after person is deleted)
+
+            # Step 7: Remove from FAISS index (after person is deleted)
             faiss_manager = get_faiss_manager()
             faiss_manager.remove_embedding(person_id)
-            
+
             return Response({
                 'message': 'Collection deleted successfully',
                 'person_id': person_id,
                 'person_number': person_number,
                 'photos_deleted': len(deleted_photos),
                 'files_deleted': len(deleted_files),
-                'deleted_photos': deleted_photos
+                'deleted_photos': deleted_photos,
+                'gcs_collection_deleted': gcs_collection_deleted,
+                'gcs_embedding_deleted': gcs_embedding_deleted
             }, status=status.HTTP_200_OK)
             
     except Exception as e:

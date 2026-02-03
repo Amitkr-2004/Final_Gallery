@@ -1,6 +1,12 @@
 """
 Collection views for "Your Collection" feature.
 Allows students to scan/upload their face and find all their photos.
+
+Face-Level Matching:
+- Matches are done at the PersonPhoto level (individual face detections)
+- Each PersonPhoto has its own face_embedding
+- Returns only images where the matched face was actually detected
+- Provides face_id tracking for precise matching
 """
 import os
 import logging
@@ -13,6 +19,7 @@ from .models import Person, PersonPhoto, Photo
 from .serializers import PhotoSerializer
 from .utils import detect_faces_from_file
 from .faiss_manager import get_faiss_manager
+from .face_faiss_manager import get_face_faiss_manager
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -26,11 +33,15 @@ def scan_face(request):
 
     Flow:
     1. Receive face image (camera scan or upload)
-    2. Detect face using InsightFace
-    3. Extract 512D embedding vector
-    4. Search FAISS index for matching Person
-    5. If match found → return person_id and metadata
-    6. If no match → return matched: false
+    2. Detect face using InsightFace (buffalo_l model)
+    3. Extract 512D ArcFace embedding vector
+    4. Search FAISS index for matching Person (cosine similarity)
+    5. If match found with high confidence → return person_id and metadata
+    6. If no match → return matched: false with appropriate message
+
+    Thresholds (configurable in .env):
+    - FACE_DETECTION_CONFIDENCE_THRESHOLD: Minimum face detection confidence (0.6)
+    - FAISS_SIMILARITY_THRESHOLD: Minimum cosine similarity for match (0.85)
 
     Request:
         image: Image file (multipart/form-data)
@@ -45,7 +56,7 @@ def scan_face(request):
                 "face_image_url": "/media/images/abc123.jpg",
                 "total_photos": 156
             },
-            "confidence": 0.85,
+            "confidence": 0.92,
             "message": "Found your collection with 156 photos!"
         }
 
@@ -55,16 +66,8 @@ def scan_face(request):
             "matched": false,
             "person": null,
             "confidence": 0.0,
-            "message": "No collection found. Upload photos to events first."
-        }
-
-    Response (Error):
-        {
-            "success": false,
-            "api": "/api/collection/scan-face/",
-            "stage": "Face Detection",
-            "message": "No face detected in the image",
-            "error_code": "NO_FACE_DETECTED"
+            "message": "Your face is not in our database. Please upload your photos first.",
+            "database_status": {"total_persons": 0}
         }
     """
     api_endpoint = "/api/collection/scan-face/"
@@ -84,15 +87,16 @@ def scan_face(request):
     image_file = request.FILES['image']
 
     try:
-        # STAGE 1: Face Detection
-        logger.info(f"[{api_endpoint}] Stage: Face Detection | Starting face detection")
+        # STAGE 1: Face Detection with InsightFace
+        logger.info(f"[{api_endpoint}] Stage: Face Detection | Starting InsightFace detection")
 
-        face_confidence_threshold = getattr(settings, 'FACE_DETECTION_CONFIDENCE_THRESHOLD', 0.3)
+        # Use stricter detection threshold
+        face_confidence_threshold = getattr(settings, 'FACE_DETECTION_CONFIDENCE_THRESHOLD', 0.6)
         detected_faces = detect_faces_from_file(image_file, min_confidence=face_confidence_threshold)
 
         # Check if any face detected
         if len(detected_faces) == 0:
-            error_msg = "No face detected in the image. Please use a clear, front-facing photo."
+            error_msg = "No face detected. Please ensure your face is clearly visible, well-lit, and facing the camera directly."
             logger.error(f"[API ERROR] {api_endpoint} | Stage: Face Detection | Error: {error_msg} | Code: NO_FACE_DETECTED")
             return Response({
                 "success": False,
@@ -104,7 +108,7 @@ def scan_face(request):
 
         # Check if multiple faces detected
         if len(detected_faces) > 1:
-            error_msg = f"Multiple faces detected ({len(detected_faces)} faces). Please upload a photo with only your face."
+            error_msg = f"Multiple faces detected ({len(detected_faces)} faces). Please ensure only your face is in the frame."
             logger.error(f"[API ERROR] {api_endpoint} | Stage: Face Detection | Error: {error_msg} | Code: MULTIPLE_FACES")
             return Response({
                 "success": False,
@@ -115,51 +119,150 @@ def scan_face(request):
                 "faces_detected": len(detected_faces)
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Extract single face embedding
-        embedding, detection_confidence = detected_faces[0]
-        logger.info(f"[{api_endpoint}] Stage: Face Detection | Success | Confidence: {detection_confidence:.2f}")
+        # Extract single face embedding (new dict format)
+        face_data = detected_faces[0]
+        embedding = face_data['embedding']
+        detection_confidence = face_data['confidence']
+        logger.info(f"[{api_endpoint}] Stage: Face Detection | Success | Detection confidence: {detection_confidence:.3f}")
 
-        # STAGE 2: Face Matching (FAISS Similarity Search)
-        logger.info(f"[{api_endpoint}] Stage: Face Matching | Searching FAISS index")
+        # Additional quality check - reject low confidence detections
+        min_quality_threshold = 0.7  # Minimum quality for reliable matching
+        if detection_confidence < min_quality_threshold:
+            error_msg = f"Face detection quality too low ({detection_confidence:.0%}). Please use a clearer, well-lit photo."
+            logger.warning(f"[{api_endpoint}] Stage: Face Detection | Low quality | Confidence: {detection_confidence:.3f}")
+            return Response({
+                "success": False,
+                "api": api_endpoint,
+                "stage": "Face Quality",
+                "message": error_msg,
+                "error_code": "LOW_QUALITY_FACE",
+                "detection_confidence": float(detection_confidence)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        similarity_threshold = getattr(settings, 'FAISS_SIMILARITY_THRESHOLD', 0.6)
-        faiss_manager = get_faiss_manager(similarity_threshold=similarity_threshold)
+        # STAGE 2: Face-Level Matching (FAISS Similarity Search at PersonPhoto level)
+        # This searches individual face detections, not just person-level embeddings
+        logger.info(f"[{api_endpoint}] Stage: Face Matching | Searching face-level FAISS index")
 
-        # Search for similar embeddings
-        search_results = faiss_manager.search_similar(embedding, k=1)
+        # Use stricter similarity threshold (0.85 = 85% similarity required)
+        similarity_threshold = getattr(settings, 'FAISS_SIMILARITY_THRESHOLD', 0.85)
+        face_faiss_manager = get_face_faiss_manager(similarity_threshold=similarity_threshold)
+
+        # Get database stats
+        face_stats = face_faiss_manager.get_stats()
+        total_face_embeddings = face_stats.get('total_face_embeddings', 0)
+
+        # Check if database is empty
+        if total_face_embeddings == 0:
+            logger.info(f"[{api_endpoint}] Stage: Face Matching | Database empty | No face embeddings indexed")
+            return Response({
+                "success": True,
+                "matched": False,
+                "person": None,
+                "matches": [],
+                "confidence": 0.0,
+                "message": "No photos in database yet. Please upload your event photos first to create your collection.",
+                "database_status": {
+                    "total_face_embeddings": 0,
+                    "status": "empty"
+                }
+            }, status=status.HTTP_200_OK)
+
+        # Search for similar face embeddings - get top 20 for comprehensive matching
+        search_results = face_faiss_manager.search_similar_faces(embedding, k=20)
+
+        # Log all search results for debugging
+        logger.info(f"[{api_endpoint}] Stage: Face Matching | Found {len(search_results)} results:")
+        for i, (person_photo_id, score) in enumerate(search_results[:5]):  # Log top 5
+            try:
+                pp = PersonPhoto.objects.select_related('person', 'photo').get(id=person_photo_id)
+                logger.info(f"  #{i+1}: PersonPhoto {person_photo_id} (Person #{pp.person.person_number}, Photo {pp.photo.id}) -> similarity: {score:.4f}")
+            except PersonPhoto.DoesNotExist:
+                logger.info(f"  #{i+1}: Unknown PersonPhoto (ID: {person_photo_id}) -> similarity: {score:.4f}")
 
         if not search_results:
-            # No persons in database yet
-            logger.info(f"[{api_endpoint}] Stage: Face Matching | No match found | FAISS index empty")
+            # No match found in non-empty database
+            logger.info(f"[{api_endpoint}] Stage: Face Matching | No match found | Database has {total_face_embeddings} face embeddings")
             return Response({
                 "success": True,
                 "matched": False,
                 "person": None,
+                "matches": [],
                 "confidence": 0.0,
-                "message": "No collection found. Upload photos to events first."
+                "message": "Your face was not found in our database. Please upload your photos to events first.",
+                "database_status": {
+                    "total_face_embeddings": total_face_embeddings,
+                    "status": "no_match"
+                }
             }, status=status.HTTP_200_OK)
 
-        person_id, similarity_score = search_results[0]
+        # Filter results by similarity threshold and build detailed response
+        matched_faces = []
+        matched_person_ids = set()
+        seen_photo_ids = set()  # Avoid duplicate photos in results
 
-        # Check if similarity meets threshold
-        if similarity_score < similarity_threshold:
-            logger.info(f"[{api_endpoint}] Stage: Face Matching | No match found | Best similarity: {similarity_score:.2f} < threshold: {similarity_threshold}")
+        for person_photo_id, similarity_score in search_results:
+            # Skip if below threshold
+            if similarity_score < similarity_threshold:
+                continue
+
+            try:
+                pp = PersonPhoto.objects.select_related('person', 'photo').get(id=person_photo_id)
+
+                # Skip duplicate photos (same photo might have multiple face detections)
+                if pp.photo.id in seen_photo_ids:
+                    continue
+                seen_photo_ids.add(pp.photo.id)
+
+                # Build image URL
+                image_url = f"{settings.MEDIA_URL}{pp.photo.file_path}"
+
+                matched_faces.append({
+                    "face_id": pp.id,  # PersonPhoto ID for face-level tracking
+                    "collection_id": pp.person.id,
+                    "person_number": pp.person.person_number,
+                    "image_id": pp.photo.id,
+                    "image_url": image_url,
+                    "similarity": float(similarity_score),
+                    "face_bbox": pp.face_bbox,  # Bounding box where face was detected
+                    "detection_confidence": pp.confidence
+                })
+
+                matched_person_ids.add(pp.person.id)
+                logger.debug(f"[FACE_MATCH] PersonPhoto {pp.id} matched: Person #{pp.person.person_number}, Photo {pp.photo.id}, Similarity: {similarity_score:.4f}")
+
+            except PersonPhoto.DoesNotExist:
+                logger.warning(f"[FACE_MATCH] PersonPhoto {person_photo_id} not found in database")
+                continue
+
+        if not matched_faces:
+            # All results were below threshold
+            best_score = search_results[0][1] if search_results else 0.0
+            logger.info(f"[{api_endpoint}] Stage: Face Matching | No match above threshold | Best: {best_score:.3f} < {similarity_threshold}")
             return Response({
                 "success": True,
                 "matched": False,
                 "person": None,
-                "confidence": float(similarity_score),
-                "message": "No collection found. Upload photos to events first."
+                "matches": [],
+                "confidence": float(best_score),
+                "message": "Your face was not found in our database. Please upload your photos to events first.",
+                "database_status": {
+                    "total_face_embeddings": total_face_embeddings,
+                    "best_similarity": float(best_score),
+                    "threshold_required": similarity_threshold,
+                    "status": "below_threshold"
+                }
             }, status=status.HTTP_200_OK)
 
-        # STAGE 3: Fetch Collection Metadata
-        logger.info(f"[{api_endpoint}] Stage: Data Retrieval | Match found | Person ID: {person_id} | Similarity: {similarity_score:.2f}")
+        # STAGE 3: Build Response with matched images
+        # Get primary matched person (highest similarity)
+        primary_match = matched_faces[0]
+        primary_person_id = primary_match["collection_id"]
 
         try:
-            person = Person.objects.get(id=person_id)
+            primary_person = Person.objects.get(id=primary_person_id)
         except Person.DoesNotExist:
-            error_msg = f"Person with ID {person_id} not found in database"
-            logger.error(f"[API ERROR] {api_endpoint} | Stage: Data Retrieval | Error: {error_msg} | Code: PERSON_NOT_FOUND")
+            error_msg = f"Person with ID {primary_person_id} not found"
+            logger.error(f"[API ERROR] {api_endpoint} | Stage: Data Retrieval | Error: {error_msg}")
             return Response({
                 "success": False,
                 "api": api_endpoint,
@@ -168,28 +271,29 @@ def scan_face(request):
                 "error_code": "PERSON_NOT_FOUND"
             }, status=status.HTTP_404_NOT_FOUND)
 
-        # Count total photos for this person
-        total_photos = PersonPhoto.objects.filter(person=person).count()
+        # Count total photos for primary person
+        total_photos_in_collection = PersonPhoto.objects.filter(person=primary_person).count()
 
-        # Get first photo for face preview
-        first_person_photo = PersonPhoto.objects.filter(person=person).select_related('photo').first()
-        face_image_url = None
-        if first_person_photo and first_person_photo.photo:
-            face_image_url = f"{settings.MEDIA_URL}{first_person_photo.photo.file_path}"
-
-        logger.info(f"[{api_endpoint}] Stage: Success | Person #{person.person_number} | Total Photos: {total_photos}")
+        logger.info(f"[{api_endpoint}] Stage: Success | Person #{primary_person.person_number} | Matched Photos: {len(matched_faces)} | Best Similarity: {primary_match['similarity']:.4f}")
+        logger.info(f"[{api_endpoint}] Matched face_ids: {[m['face_id'] for m in matched_faces[:10]]}")
+        logger.info(f"[{api_endpoint}] Matched image_ids: {[m['image_id'] for m in matched_faces[:10]]}")
 
         return Response({
             "success": True,
             "matched": True,
             "person": {
-                "id": person.id,
-                "person_number": person.person_number,
-                "face_image_url": face_image_url,
-                "total_photos": total_photos
+                "id": primary_person.id,
+                "person_number": primary_person.person_number,
+                "face_image_url": primary_match["image_url"],
+                "total_photos_in_collection": total_photos_in_collection
             },
-            "confidence": float(similarity_score),
-            "message": f"Found your collection with {total_photos} photos!"
+            "matches": matched_faces,  # All matched images with face-level details
+            "total_matched_photos": len(matched_faces),
+            "collections_matched": list(matched_person_ids),
+            "confidence": float(primary_match["similarity"]),
+            "detection_confidence": float(detection_confidence),
+            "threshold_used": similarity_threshold,
+            "message": f"Found {len(matched_faces)} photos containing your face!"
         }, status=status.HTTP_200_OK)
 
     except Exception as e:

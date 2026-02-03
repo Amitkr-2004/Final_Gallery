@@ -98,13 +98,48 @@ async function initializeServices() {
         }
       },
 
+      /**
+       * Calculate Euclidean distance between two embeddings
+       */
       euclideanDistance: (embedding1, embedding2) => {
         let sum = 0;
-        for (let i = 0; i < 128; i++) {
+        for (let i = 0; i < embedding1.length; i++) {
           const diff = embedding1[i] - embedding2[i];
           sum += diff * diff;
         }
         return Math.sqrt(sum);
+      },
+
+      /**
+       * Calculate cosine similarity between two embeddings
+       * Returns value between -1 and 1 (1 = identical, 0 = orthogonal, -1 = opposite)
+       */
+      cosineSimilarity: (embedding1, embedding2) => {
+        let dotProduct = 0;
+        let norm1 = 0;
+        let norm2 = 0;
+
+        for (let i = 0; i < embedding1.length; i++) {
+          dotProduct += embedding1[i] * embedding2[i];
+          norm1 += embedding1[i] * embedding1[i];
+          norm2 += embedding2[i] * embedding2[i];
+        }
+
+        const magnitude = Math.sqrt(norm1) * Math.sqrt(norm2);
+        if (magnitude === 0) return 0;
+
+        return dotProduct / magnitude;
+      },
+
+      /**
+       * Convert Euclidean distance to similarity score (0-1 range)
+       * Uses exponential decay for better discrimination
+       * For face-api.js embeddings: distance < 0.4 = same person, > 0.5 = different
+       */
+      distanceToSimilarity: (distance) => {
+        // Exponential decay: similarity = exp(-distance * k)
+        // k=3 gives good discrimination for face embeddings
+        return Math.exp(-distance * 3);
       }
     };
 
@@ -181,8 +216,17 @@ async function loadCollectionsFromGCS() {
 
 /**
  * Search collections for matching face
+ *
+ * For face-api.js FaceNet embeddings:
+ * - Same person: Euclidean distance typically < 0.4
+ * - Different person: Euclidean distance typically > 0.5
+ * - Recommended threshold: 0.45 for reliable matching
+ *
+ * @param {Array<number>} embedding - 128-dim face embedding
+ * @param {number} threshold - Max Euclidean distance for match (default: 0.45)
+ * @param {number} limit - Max results to return
  */
-async function searchCollections(embedding, threshold = 0.6, limit = 10) {
+async function searchCollections(embedding, threshold = 0.45, limit = 10) {
   const collectionsResult = await loadCollectionsFromGCS();
 
   if (!collectionsResult.success) {
@@ -196,26 +240,34 @@ async function searchCollections(embedding, threshold = 0.6, limit = 10) {
 
     let bestMatch = null;
     let minDistance = Infinity;
+    let bestCosine = -1;
 
     for (const face of collection.faces) {
       if (!face.embedding_vector || face.embedding_vector.length !== 128) continue;
 
+      // Skip low confidence detections from the collection
+      if (face.confidence && face.confidence < 0.5) continue;
+
       const distance = faceScanner.euclideanDistance(embedding, face.embedding_vector);
+      const cosineSim = faceScanner.cosineSimilarity(embedding, face.embedding_vector);
 
       if (distance < minDistance) {
         minDistance = distance;
+        bestCosine = cosineSim;
         bestMatch = {
           face_id: face.face_id,
           image_id: face.image_id,
-          distance,
-          similarity: 1 - distance,
+          distance: Math.round(distance * 1000) / 1000, // Round to 3 decimals
+          similarity: faceScanner.distanceToSimilarity(distance),
+          cosine_similarity: Math.round(cosineSim * 1000) / 1000,
           confidence: face.confidence,
           is_representative: face.is_representative
         };
       }
     }
 
-    if (bestMatch && minDistance <= threshold) {
+    // Only accept matches within threshold AND with positive cosine similarity
+    if (bestMatch && minDistance <= threshold && bestCosine > 0.5) {
       matches.push({
         collection_id: collection.collection_id,
         collection_name: collection.name,
@@ -229,8 +281,8 @@ async function searchCollections(embedding, threshold = 0.6, limit = 10) {
     }
   }
 
-  // Sort by similarity (highest first)
-  matches.sort((a, b) => b.match.similarity - a.match.similarity);
+  // Sort by distance (lowest first) - lower distance = better match
+  matches.sort((a, b) => a.match.distance - b.match.distance);
 
   return {
     success: true,
@@ -315,6 +367,14 @@ app.post('/api/scanner/upload', upload.single('image'), async (req, res) => {
   }
 });
 
+/**
+ * Scan face and match against collections
+ *
+ * Improved matching with:
+ * - Stricter default threshold (0.45 instead of 0.6)
+ * - Minimum confidence check for scanned face
+ * - Dual verification with cosine similarity
+ */
 app.post('/api/scanner/match', upload.single('image'), async (req, res) => {
   let imagePath = null;
 
@@ -331,7 +391,9 @@ app.post('/api/scanner/match', upload.single('image'), async (req, res) => {
       return res.status(400).json({ success: false, error: 'No image provided' });
     }
 
-    const threshold = parseFloat(req.body.threshold || 0.6);
+    // Use stricter default threshold (0.45) for better accuracy
+    // Lower threshold = stricter matching, fewer false positives
+    const threshold = parseFloat(req.body.threshold || 0.45);
     const limit = parseInt(req.body.limit || 10);
 
     // Scan face
@@ -341,17 +403,33 @@ app.post('/api/scanner/match', upload.single('image'), async (req, res) => {
       return res.json(scanResult);
     }
 
+    // Check minimum face detection confidence
+    const minConfidence = 0.7; // Require 70% detection confidence
+    if (scanResult.face.confidence < minConfidence) {
+      return res.json({
+        success: false,
+        error: `Face detection confidence too low (${(scanResult.face.confidence * 100).toFixed(1)}%). Please use a clearer image.`,
+        scanned_face: {
+          confidence: scanResult.face.confidence,
+          boundingBox: scanResult.face.boundingBox
+        }
+      });
+    }
+
     // Search collections
     const searchResult = await searchCollections(scanResult.face.embedding, threshold, limit);
 
     res.json({
       success: true,
       scanned_face: {
-        confidence: scanResult.face.confidence,
+        confidence: Math.round(scanResult.face.confidence * 1000) / 1000,
         boundingBox: scanResult.face.boundingBox
       },
       matches: searchResult.matches || [],
-      stats: searchResult.stats || {}
+      stats: {
+        ...searchResult.stats,
+        min_confidence_required: minConfidence
+      }
     });
 
   } catch (error) {
@@ -380,13 +458,22 @@ app.post('/api/scanner/compare', async (req, res) => {
     }
 
     const distance = faceScanner.euclideanDistance(embedding1, embedding2);
-    const similarity = 1 - distance;
+    const cosineSim = faceScanner.cosineSimilarity(embedding1, embedding2);
+    const similarity = faceScanner.distanceToSimilarity(distance);
+
+    // Match criteria: distance < 0.45 AND cosine similarity > 0.5
+    const isMatch = distance < 0.45 && cosineSim > 0.5;
 
     res.json({
       success: true,
-      distance,
-      similarity,
-      match: distance < 0.6
+      distance: Math.round(distance * 1000) / 1000,
+      cosine_similarity: Math.round(cosineSim * 1000) / 1000,
+      similarity: Math.round(similarity * 1000) / 1000,
+      match: isMatch,
+      interpretation: distance < 0.35 ? 'Same person (high confidence)'
+                    : distance < 0.45 ? 'Same person (moderate confidence)'
+                    : distance < 0.55 ? 'Possibly same person (low confidence)'
+                    : 'Different persons'
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -432,6 +519,98 @@ app.post('/api/collections/refresh', async (req, res) => {
       count: result.collections ? result.collections.length : 0
     });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Get image by ID - streams image from GCS
+ */
+app.get('/api/images/:imageId', async (req, res) => {
+  try {
+    const { imageId } = req.params;
+
+    if (!bucket) {
+      return res.status(500).json({ success: false, error: 'GCS not configured' });
+    }
+
+    // Search GCS for the image file directly using prefix search
+    const extensions = ['.jpeg', '.jpg', '.png', '.webp'];
+
+    // First, try to find in collections cache for faster lookup
+    const collectionsResult = await loadCollectionsFromGCS();
+    let collectionIds = [];
+
+    if (collectionsResult.success) {
+      for (const collection of collectionsResult.collections) {
+        if (collection.image_ids && collection.image_ids.includes(imageId)) {
+          collectionIds.push(collection.collection_id);
+        }
+      }
+    }
+
+    // Try known collection paths first
+    for (const collectionId of collectionIds) {
+      for (const ext of extensions) {
+        const gcsPath = `images/${collectionId}/${imageId}${ext}`;
+        const file = bucket.file(gcsPath);
+        const [exists] = await file.exists();
+        if (exists) {
+          const contentTypes = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.webp': 'image/webp'
+          };
+          res.setHeader('Content-Type', contentTypes[ext] || 'image/jpeg');
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          return file.createReadStream()
+            .on('error', (err) => {
+              if (!res.headersSent) {
+                res.status(500).json({ success: false, error: 'Failed to stream image' });
+              }
+            })
+            .pipe(res);
+        }
+      }
+    }
+
+    // If not found in known collections, search all images folder
+    try {
+      const [files] = await bucket.getFiles({ prefix: 'images/', maxResults: 1000 });
+      for (const file of files) {
+        if (file.name.includes(imageId)) {
+          const ext = path.extname(file.name).toLowerCase();
+          const contentTypes = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.webp': 'image/webp'
+          };
+          res.setHeader('Content-Type', contentTypes[ext] || 'image/jpeg');
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          return file.createReadStream()
+            .on('error', (err) => {
+              if (!res.headersSent) {
+                res.status(500).json({ success: false, error: 'Failed to stream image' });
+              }
+            })
+            .pipe(res);
+        }
+      }
+    } catch (searchErr) {
+      console.error('GCS search error:', searchErr.message);
+    }
+
+    // Image not found anywhere
+    return res.status(404).json({
+      success: false,
+      error: 'Image not found in GCS. It may not have been synced yet.',
+      imageId
+    });
+
+  } catch (error) {
+    console.error('Error fetching image:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
