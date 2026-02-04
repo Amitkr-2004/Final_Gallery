@@ -15,8 +15,8 @@ const faceProcessing = require('../services/face-processing');
 const imageCompression = require('../services/image-compression');
 const FormData = require('form-data');
 
-// Django API URL for syncing uploads (use 127.0.0.1 instead of localhost to avoid IPv6 issues)
-const DJANGO_API_URL = 'http://127.0.0.1:8000';
+// Django API URL - will be set from config during handler registration
+let DJANGO_API_URL = 'http://127.0.0.1:8000';
 
 /**
  * Sync uploaded image to Django backend (for GCS sync and face recognition)
@@ -139,6 +139,10 @@ function registerUploadHandlers(ipcMain, getService) {
   const logger = getService('logger');
   const configService = getService('configService');
   imageCompression.initialize(logger, configService);
+
+  // Set Django API URL from config (use 127.0.0.1 to avoid IPv6 issues on Windows)
+  DJANGO_API_URL = configService.get('backend.apiUrl', 'http://127.0.0.1:8000');
+  logger.info('Django API URL configured', { url: DJANGO_API_URL });
 
   /**
    * Cancel ongoing upload

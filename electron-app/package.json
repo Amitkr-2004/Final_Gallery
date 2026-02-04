@@ -19,6 +19,9 @@
     "package:win": "electron-builder build --win --publish never",
     "package:mac": "electron-builder build --mac --publish never",
     "package:linux": "electron-builder build --linux --publish never",
+    "postinstall": "electron-rebuild",
+    "rebuild": "electron-rebuild",
+    "rebuild:win": "electron-rebuild --platform win32",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src --ext .js,.jsx",
@@ -104,14 +107,39 @@
       {
         "from": "config",
         "to": "config"
+      },
+      {
+        "from": "models",
+        "to": "models",
+        "filter": ["**/*"]
       }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node",
+      "**/node_modules/sharp/**",
+      "**/node_modules/canvas/**",
+      "**/node_modules/better-sqlite3/**"
     ],
     "win": {
       "target": [
         "nsis",
         "portable"
       ],
-      "icon": "resources/icon.ico"
+      "icon": "resources/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Orchids Gallery"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
     },
     "mac": {
       "target": [

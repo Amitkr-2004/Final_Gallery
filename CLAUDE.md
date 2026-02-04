@@ -147,14 +147,25 @@ Face Gallery is a desktop application that automatically:
 ## 📦 Installation
 
 ### Prerequisites
+
+#### All Platforms
 - **Node.js** 18.0.0 or higher
 - **npm** 8.0.0 or higher
 - **Git** (for cloning)
 - **Google Cloud Project** (for cloud sync)
+- **Python** 3.8+ (for Django backend)
 
-### Steps
+#### Windows-Specific Requirements
+- **Visual Studio Build Tools** 2019 or later (for native modules)
+  - Install "Desktop development with C++" workload
+  - Or run: `npm install --global windows-build-tools` (requires Admin)
+- **Python** must be in PATH
 
-1. **Clone the repository:**
+### Installation Steps
+
+#### macOS / Linux
+
+1. **Clone and enter directory:**
    ```bash
    cd electron-app
    ```
@@ -185,6 +196,77 @@ Face Gallery is a desktop application that automatically:
    ```bash
    npm run dev
    ```
+
+#### Windows Installation
+
+1. **Install Visual Studio Build Tools:**
+   ```powershell
+   # Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+   # Select "Desktop development with C++" workload
+   # OR run as Administrator:
+   npm install --global windows-build-tools
+   ```
+
+2. **Clone and enter directory:**
+   ```powershell
+   cd electron-app
+   ```
+
+3. **Install dependencies:**
+   ```powershell
+   npm install
+   ```
+
+   If native module errors occur, rebuild them:
+   ```powershell
+   npm run rebuild
+   ```
+
+4. **Download face detection models:**
+   ```powershell
+   node scripts/download-face-models.js
+   ```
+
+5. **Set up environment variables:**
+   Create `.env` file in `electron-app\` directory:
+   ```env
+   GOOGLE_APPLICATION_CREDENTIALS=./gcp-service-account.json
+   GCS_BUCKET_NAME=your-bucket-name
+   GCP_PROJECT_ID=your-project-id
+   FIRESTORE_DATABASE_ID=(default)
+   ```
+
+6. **Add GCP credentials:**
+   Place your `gcp-service-account.json` in `electron-app\` directory
+
+7. **Start the app:**
+   ```powershell
+   npm run dev
+   ```
+
+### Building for Distribution
+
+#### Windows
+```powershell
+npm run build
+npm run package:win
+# Outputs: dist/Orchids Gallery-x.x.x-x64.exe (installer)
+#          dist/Orchids Gallery-x.x.x-portable.exe (portable)
+```
+
+#### macOS
+```bash
+npm run build
+npm run package:mac
+# Outputs: dist/Orchids Gallery-x.x.x.dmg
+```
+
+#### Linux
+```bash
+npm run build
+npm run package:linux
+# Outputs: dist/Orchids Gallery-x.x.x.AppImage
+```
 
 ---
 
@@ -856,6 +938,58 @@ All colors are defined in `src/renderer/styles/global.css`:
 1. Rebuild native modules: `npx electron-rebuild`
 2. Or reinstall: `rm -rf node_modules && npm install`
 
+### Issue: Native module build fails on Windows
+**Solution:**
+1. Install Visual Studio Build Tools:
+   ```powershell
+   # Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+   # Install "Desktop development with C++" workload
+   ```
+2. Ensure Python is in PATH
+3. Run as Administrator:
+   ```powershell
+   npm install --global windows-build-tools
+   ```
+4. Rebuild modules:
+   ```powershell
+   npm run rebuild
+   ```
+
+### Issue: EACCES permission denied on Windows
+**Solution:**
+1. Run terminal as Administrator
+2. Or use a non-system directory for the project
+3. Disable antivirus temporarily during npm install
+4. Clear npm cache: `npm cache clean --force`
+
+### Issue: Long path errors on Windows
+**Solution:**
+1. Enable long paths in Windows:
+   ```powershell
+   # Run as Administrator
+   New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+   ```
+2. Or move project to shorter path (e.g., `C:\Projects\`)
+
+### Issue: Sharp/Canvas installation fails on Windows
+**Solution:**
+1. Install Visual C++ Redistributable 2015-2022
+2. Install GTK3 for Canvas (optional, for canvas features)
+3. Rebuild:
+   ```powershell
+   npm rebuild sharp --platform=win32
+   npm rebuild canvas
+   npm run rebuild
+   ```
+
+### Issue: localhost vs 127.0.0.1 connection issues (Windows IPv6)
+**Solution:**
+The app uses `127.0.0.1` instead of `localhost` to avoid IPv6 issues.
+If still having issues:
+1. Check `config/default.json` has correct `backend.apiUrl`
+2. Ensure Django is running: `python manage.py runserver 127.0.0.1:8000`
+3. Check Windows Firewall isn't blocking the connection
+
 ### Issue: Images not displaying in Gallery
 **Solution:**
 1. Images are now loaded via IPC as base64 data URLs for reliability
@@ -944,10 +1078,20 @@ For issues and questions:
 ---
 
 **Last Updated:** February 4, 2026
-**Version:** 1.2.1
+**Version:** 1.3.0
 **Status:** Production Ready ✅
 
 ### Changelog
+
+#### v1.3.0 (February 4, 2026)
+- ✅ **Windows Compatibility** - Full support for Windows 10/11
+- ✅ **Configurable Backend URL** - Django API URL now in config/default.json
+- ✅ **Native Module Rebuild Scripts** - Added `npm run rebuild` for Windows
+- ✅ **NSIS Installer** - Windows installer with customizable install directory
+- ✅ **Portable Build** - Standalone Windows executable
+- ✅ **Long Path Support** - Documentation for Windows long path issues
+- ✅ **IPv6 Fix** - Uses 127.0.0.1 instead of localhost to avoid Windows IPv6 issues
+- ✅ **Expanded Documentation** - Windows-specific installation and troubleshooting
 
 #### v1.2.1 (February 4, 2026)
 - ✅ **Lazy Loading Gallery** - Images load progressively (12 at a time) as user scrolls

@@ -7,8 +7,8 @@ const { getDatabase } = require('../database/schema');
 const fs = require('fs').promises;
 const path = require('path');
 
-// Django API URL for syncing deletions (use 127.0.0.1 instead of localhost to avoid IPv6 issues)
-const DJANGO_API_URL = 'http://127.0.0.1:8000';
+// Django API URL - will be set from config during handler registration
+let DJANGO_API_URL = 'http://127.0.0.1:8000';
 
 /**
  * Call Django API to delete a photo (syncs deletion to GCS via Django)
@@ -51,6 +51,10 @@ async function syncDeleteToDjango(imageHash, logger) {
 }
 
 function registerGalleryHandlers(ipcMain, getService) {
+  // Set Django API URL from config (use 127.0.0.1 to avoid IPv6 issues on Windows)
+  const configService = getService('configService');
+  DJANGO_API_URL = configService.get('backend.apiUrl', 'http://127.0.0.1:8000');
+
   /**
    * Get all uploaded files
    * Channel: core:gallery:get-all-files

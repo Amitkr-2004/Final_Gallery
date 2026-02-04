@@ -1,8 +1,12 @@
 {
   "app": {
-    "name": "Image Gallery",
-    "version": "1.0.0",
+    "name": "Orchids Gallery",
+    "version": "1.2.1",
     "environment": "development"
+  },
+  "backend": {
+    "apiUrl": "http://127.0.0.1:8000",
+    "timeout": 30000
   },
   "storage": {
     "appDataPath": "./app-data",
