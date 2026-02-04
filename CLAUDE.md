@@ -66,6 +66,7 @@ Face Gallery is a desktop application that automatically:
 - **Pinterest-style Scanner Gallery** - Masonry grid layout for matched photos
 - **Lightbox Image Viewer** - Full-screen viewing with download option
 - **Lazy Loading Gallery** - Images load progressively as user scrolls
+- **Gallery Pagination** - 20 images per page with navigation controls
 
 ---
 
@@ -1078,10 +1079,17 @@ For issues and questions:
 ---
 
 **Last Updated:** February 4, 2026
-**Version:** 1.3.0
+**Version:** 1.3.1
 **Status:** Production Ready ✅
 
 ### Changelog
+
+#### v1.3.1 (February 4, 2026)
+- ✅ **Gallery Pagination** - 20 images per page for better performance
+- ✅ **Page Navigation** - First/Prev/Next/Last buttons with page numbers
+- ✅ **Page Jump** - Direct input to jump to specific page
+- ✅ **Smart Pagination** - Ellipsis for large page counts
+- ✅ **Search Integration** - Search shows all results, pagination for browse mode
 
 #### v1.3.0 (February 4, 2026)
 - ✅ **Windows Compatibility** - Full support for Windows 10/11
