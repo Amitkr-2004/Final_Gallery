@@ -65,6 +65,7 @@ Face Gallery is a desktop application that automatically:
 - **FotoOwl-style Upload Progress** - Circular progress indicator with percentage
 - **Pinterest-style Scanner Gallery** - Masonry grid layout for matched photos
 - **Lightbox Image Viewer** - Full-screen viewing with download option
+- **Lazy Loading Gallery** - Images load progressively as user scrolls
 
 ---
 
@@ -359,6 +360,7 @@ http://localhost:8088/camera-scanner.html
 **Features:**
 - Camera-based face scanning
 - Pinterest-style gallery for matched photos
+- Lazy loading (12 images at a time as you scroll)
 - Individual photo download
 - Lightbox for full-screen viewing
 - "Scan Again" button to return to scanner
@@ -503,6 +505,33 @@ http://localhost:8088/camera-scanner.html
   4. Click "Scan Again" → Return to scanner
 - **File Modified:**
   - `camera-scanner.html` - Complete redesign
+
+### Stage 11: Lazy Loading for Scanner Gallery ✅
+- **Objective:** Improve performance by loading images progressively as user scrolls
+- **Implementation:**
+  - Intersection Observer API for scroll detection
+  - Initial batch of 12 images loaded on scan complete
+  - Additional batches of 12 images load as user scrolls
+  - 200px rootMargin for preloading before viewport
+  - Loading spinner indicator while fetching more
+  - Observer cleanup when returning to scanner
+- **Technical Details:**
+  ```javascript
+  // Configuration
+  const IMAGES_PER_BATCH = 12;
+
+  // Intersection Observer with look-ahead
+  lazyLoadObserver = new IntersectionObserver((entries) => {
+    if (entry.isIntersecting) loadMoreImages();
+  }, { rootMargin: '200px', threshold: 0.1 });
+  ```
+- **Benefits:**
+  - Faster initial page load
+  - Reduced memory usage for large result sets
+  - Smoother scrolling experience
+  - Better performance on slower connections
+- **File Modified:**
+  - `camera-scanner.html` - Added lazy loading logic and loading indicator styles
 
 ---
 
@@ -915,10 +944,16 @@ For issues and questions:
 ---
 
 **Last Updated:** February 4, 2026
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Status:** Production Ready ✅
 
 ### Changelog
+
+#### v1.2.1 (February 4, 2026)
+- ✅ **Lazy Loading Gallery** - Images load progressively (12 at a time) as user scrolls
+- ✅ **Intersection Observer** - Smart scroll detection with 200px look-ahead
+- ✅ **Loading Indicator** - Spinner shown while fetching more images
+- ✅ **Memory Optimization** - Reduced initial load for large result sets
 
 #### v1.2.0 (February 4, 2026)
 - ✅ **Image Compression** - Automatic thumbnail generation (200x200 small, 800x800 medium)
