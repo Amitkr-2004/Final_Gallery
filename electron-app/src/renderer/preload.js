@@ -15,7 +15,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectFiles: () => ipcRenderer.invoke('core:upload:select-files'),
     selectFolder: () => ipcRenderer.invoke('core:upload:select-folder'),
     uploadFiles: (filePaths) => ipcRenderer.invoke('core:upload:upload-files', filePaths),
-    getStats: () => ipcRenderer.invoke('core:upload:get-stats')
+    getStats: () => ipcRenderer.invoke('core:upload:get-stats'),
+    cancel: () => ipcRenderer.invoke('core:upload:cancel'),
+    onProgress: (callback) => {
+      const handler = (event, progress) => callback(progress);
+      ipcRenderer.on('upload:progress', handler);
+      // Return cleanup function
+      return () => ipcRenderer.removeListener('upload:progress', handler);
+    }
   },
 
   // Gallery APIs

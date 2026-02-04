@@ -94,6 +94,7 @@ function Gallery() {
   const [stats, setStats] = useState({ totalFiles: 0, totalSize: 0 });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [clearing, setClearing] = useState(false);
   const location = useLocation();
 
   // Refresh data whenever navigating to this page
@@ -173,6 +174,11 @@ function Gallery() {
   };
 
   const handleClearAll = async () => {
+    // Prevent multiple clicks
+    if (clearing) {
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete ALL images? This cannot be undone!')) {
       return;
     }
@@ -182,19 +188,22 @@ function Gallery() {
       return;
     }
 
+    setClearing(true);
     try {
       const result = await window.electronAPI.gallery.clearAll();
       if (result.success) {
         // Reload files and stats after clearing
         await loadFiles();
         await loadStats();
-        alert(result.message);
+        alert(`Gallery cleared!\n\nDeleted: ${result.deletedCount} files\nFailed: ${result.failedCount || 0} files`);
       } else {
         alert('Failed to clear gallery: ' + result.error);
       }
     } catch (error) {
       console.error('Clear all failed:', error);
       alert('Failed to clear gallery');
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -223,23 +232,33 @@ function Gallery() {
           {files.length > 0 && (
             <button
               onClick={handleClearAll}
+              disabled={clearing}
               style={{
                 padding: '10px 20px',
                 fontSize: '14px',
-                backgroundColor: '#dc3545',
+                backgroundColor: clearing ? '#999' : '#dc3545',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: 'pointer',
+                cursor: clearing ? 'not-allowed' : 'pointer',
                 fontWeight: '600',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                opacity: clearing ? 0.7 : 1
               }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c82333'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc3545'}
+              onMouseOver={(e) => !clearing && (e.currentTarget.style.backgroundColor = '#c82333')}
+              onMouseOut={(e) => !clearing && (e.currentTarget.style.backgroundColor = '#dc3545')}
             >
-              <Trash2 size={16} /> Clear All
+              {clearing ? (
+                <>
+                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Clearing...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={16} /> Clear All
+                </>
+              )}
             </button>
           )}
         </div>

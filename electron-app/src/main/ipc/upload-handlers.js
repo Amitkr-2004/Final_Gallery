@@ -129,7 +129,18 @@ async function getAllImageFiles(dirPath, allowedExtensions) {
   return files;
 }
 
+// Track upload cancellation state
+let uploadCancelled = false;
+
 function registerUploadHandlers(ipcMain, getService) {
+  /**
+   * Cancel ongoing upload
+   * Channel: core:upload:cancel
+   */
+  ipcMain.handle('core:upload:cancel', async () => {
+    uploadCancelled = true;
+    return { success: true, message: 'Upload cancellation requested' };
+  });
   /**
    * Select files for upload
    * Channel: core:upload:select-files
@@ -206,13 +217,41 @@ function registerUploadHandlers(ipcMain, getService) {
         success: 0,
         failed: 0,
         skipped: 0,
+        cancelled: 0,
         files: [],
         errors: [],
         duplicates: []
       };
 
+      // Reset cancellation flag at start of upload
+      uploadCancelled = false;
+
       // Process each file
-      for (const sourcePath of filePaths) {
+      for (let i = 0; i < filePaths.length; i++) {
+        // Check if upload was cancelled
+        if (uploadCancelled) {
+          results.cancelled = filePaths.length - i;
+          logger.info('Upload cancelled by user', {
+            processed: i,
+            remaining: results.cancelled,
+            success: results.success,
+            failed: results.failed
+          });
+
+          // Send cancellation progress update
+          event.sender.send('upload:progress', {
+            current: i,
+            total: filePaths.length,
+            success: results.success,
+            failed: results.failed,
+            skipped: results.skipped,
+            cancelled: results.cancelled,
+            status: 'cancelled'
+          });
+          break;
+        }
+
+        const sourcePath = filePaths[i];
         try {
           // Get file info
           const stat = await fs.stat(sourcePath);
@@ -236,6 +275,17 @@ function registerUploadHandlers(ipcMain, getService) {
               existingFile: existing.filename
             });
             logger.info('Duplicate file skipped', { filename, hash: fileHash, existingFile: existing.filename });
+
+            // Send progress update for skipped file
+            event.sender.send('upload:progress', {
+              current: i + 1,
+              total: filePaths.length,
+              success: results.success,
+              failed: results.failed,
+              skipped: results.skipped,
+              currentFile: filename,
+              status: 'skipped'
+            });
             continue;
           }
 
@@ -285,6 +335,17 @@ function registerUploadHandlers(ipcMain, getService) {
               // Don't fail the upload if face detection fails
             }
 
+            // Send progress update for successful upload
+            event.sender.send('upload:progress', {
+              current: i + 1,
+              total: filePaths.length,
+              success: results.success,
+              failed: results.failed,
+              skipped: results.skipped,
+              currentFile: filename,
+              status: 'success'
+            });
+
             // SYNC TO DJANGO BACKEND (for GCS upload and InsightFace detection)
             // Django is the single source of truth for GCS operations
             try {
@@ -312,6 +373,17 @@ function registerUploadHandlers(ipcMain, getService) {
           logger.error('Failed to upload file', {
             filename: path.basename(sourcePath),
             error: error.message
+          });
+
+          // Send progress update for failed upload
+          event.sender.send('upload:progress', {
+            current: i + 1,
+            total: filePaths.length,
+            success: results.success,
+            failed: results.failed,
+            skipped: results.skipped,
+            currentFile: path.basename(sourcePath),
+            status: 'failed'
           });
         }
       }
