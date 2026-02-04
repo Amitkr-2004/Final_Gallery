@@ -485,6 +485,34 @@
             height: 18px;
         }
 
+        /* Lazy Load Sentinel */
+        .load-more-sentinel {
+            break-inside: avoid;
+            margin-bottom: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-more {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: #86868b;
+            font-size: 14px;
+        }
+
+        .spinner-small {
+            width: 28px;
+            height: 28px;
+            border: 3px solid #e5e5e7;
+            border-top-color: #800020;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
         /* No Match State */
         .no-match {
             text-align: center;
@@ -812,6 +840,12 @@
         let currentMatches = [];
         let currentLightboxUrl = '';
 
+        // Lazy loading configuration
+        const IMAGES_PER_BATCH = 12;
+        let displayedCount = 0;
+        let isLoadingMore = false;
+        let lazyLoadObserver = null;
+
         // Update status badge
         function updateStatus(text, type) {
             statusDiv.textContent = text;
@@ -838,6 +872,13 @@
 
         // Show Scanner View
         function showScanner() {
+            // Clean up lazy load observer
+            if (lazyLoadObserver) {
+                lazyLoadObserver.disconnect();
+            }
+            displayedCount = 0;
+            currentMatches = [];
+
             galleryView.classList.remove('active');
             scannerView.classList.remove('hidden');
 
@@ -866,32 +907,123 @@
             updateStatus('Ready', 'ready');
         }
 
-        // Show Gallery View (Clean Pinterest Style - No Headers)
+        // Show Gallery View (Clean Pinterest Style - No Headers) with Lazy Loading
         function showGallery(result) {
             scannerView.classList.add('hidden');
             galleryView.classList.add('active');
 
             const { matches } = result;
             currentMatches = matches;
+            displayedCount = 0;
 
-            // Build clean Pinterest masonry grid
-            masonryGrid.innerHTML = matches.map((match, i) => `
-                <div class="masonry-item" onclick="openLightbox('${API_URL}${match.image_url}', 'photo_${match.image_id}.jpg')">
-                    <img src="${API_URL}${match.image_url}"
-                         alt="Photo ${i + 1}"
-                         loading="lazy"
-                         onerror="this.parentElement.style.display='none'">
-                    <div class="masonry-overlay">
-                        <button class="masonry-download-btn" onclick="event.stopPropagation(); downloadSingleImage('${API_URL}${match.image_url}', 'photo_${match.image_id}.jpg')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                        </button>
-                    </div>
+            // Clear grid and add initial batch
+            masonryGrid.innerHTML = '';
+
+            // Load initial batch
+            loadMoreImages();
+
+            // Setup Intersection Observer for infinite scroll
+            setupLazyLoadObserver();
+        }
+
+        // Create HTML for a single masonry item
+        function createMasonryItem(match, index) {
+            const div = document.createElement('div');
+            div.className = 'masonry-item';
+            div.onclick = () => openLightbox(`${API_URL}${match.image_url}`, `photo_${match.image_id}.jpg`);
+
+            div.innerHTML = `
+                <img src="${API_URL}${match.image_url}"
+                     alt="Photo ${index + 1}"
+                     loading="lazy"
+                     onerror="this.parentElement.style.display='none'">
+                <div class="masonry-overlay">
+                    <button class="masonry-download-btn" onclick="event.stopPropagation(); downloadSingleImage('${API_URL}${match.image_url}', 'photo_${match.image_id}.jpg')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                    </button>
                 </div>
-            `).join('');
+            `;
+
+            return div;
+        }
+
+        // Load more images into the grid
+        function loadMoreImages() {
+            if (isLoadingMore || displayedCount >= currentMatches.length) return;
+
+            isLoadingMore = true;
+
+            // Remove existing sentinel if present
+            const existingSentinel = document.getElementById('loadMoreSentinel');
+            if (existingSentinel) {
+                existingSentinel.remove();
+            }
+
+            // Get next batch of images
+            const endIndex = Math.min(displayedCount + IMAGES_PER_BATCH, currentMatches.length);
+            const fragment = document.createDocumentFragment();
+
+            for (let i = displayedCount; i < endIndex; i++) {
+                const item = createMasonryItem(currentMatches[i], i);
+                fragment.appendChild(item);
+            }
+
+            masonryGrid.appendChild(fragment);
+            displayedCount = endIndex;
+
+            // Add sentinel for loading more if there are remaining images
+            if (displayedCount < currentMatches.length) {
+                const sentinel = document.createElement('div');
+                sentinel.id = 'loadMoreSentinel';
+                sentinel.className = 'load-more-sentinel';
+                sentinel.innerHTML = `
+                    <div class="loading-more">
+                        <div class="spinner-small"></div>
+                        <span>Loading more photos...</span>
+                    </div>
+                `;
+                masonryGrid.appendChild(sentinel);
+
+                // Observe the new sentinel
+                if (lazyLoadObserver) {
+                    lazyLoadObserver.observe(sentinel);
+                }
+            }
+
+            isLoadingMore = false;
+        }
+
+        // Setup Intersection Observer for lazy loading
+        function setupLazyLoadObserver() {
+            // Disconnect existing observer
+            if (lazyLoadObserver) {
+                lazyLoadObserver.disconnect();
+            }
+
+            // Create new observer
+            lazyLoadObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !isLoadingMore) {
+                        // Small delay to allow images to render smoothly
+                        setTimeout(() => {
+                            loadMoreImages();
+                        }, 100);
+                    }
+                });
+            }, {
+                rootMargin: '200px', // Start loading before sentinel is visible
+                threshold: 0.1
+            });
+
+            // Observe initial sentinel if exists
+            const sentinel = document.getElementById('loadMoreSentinel');
+            if (sentinel) {
+                lazyLoadObserver.observe(sentinel);
+            }
         }
 
         // Lightbox functions
