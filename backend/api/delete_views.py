@@ -63,6 +63,23 @@ def delete_photo(request, photo_id):
                     # Log error but don't fail transaction if file already deleted
                     print(f"Warning: Could not delete file {image_path}: {e}")
 
+            # Step 4a: Delete thumbnails from local storage
+            if photo.thumbnail_small:
+                thumb_small_path = os.path.join(settings.MEDIA_ROOT, photo.thumbnail_small)
+                if os.path.exists(thumb_small_path):
+                    try:
+                        os.remove(thumb_small_path)
+                    except OSError as e:
+                        print(f"Warning: Could not delete thumbnail {thumb_small_path}: {e}")
+
+            if photo.thumbnail_medium:
+                thumb_medium_path = os.path.join(settings.MEDIA_ROOT, photo.thumbnail_medium)
+                if os.path.exists(thumb_medium_path):
+                    try:
+                        os.remove(thumb_medium_path)
+                    except OSError as e:
+                        print(f"Warning: Could not delete thumbnail {thumb_medium_path}: {e}")
+
             # Step 4b: Delete image from Google Cloud Storage
             gcs_deleted = False
             gcs_error = None
@@ -201,6 +218,23 @@ def delete_person(request, person_id):
                             deleted_files.append(photo.file_path)
                         except OSError as e:
                             print(f"Warning: Could not delete file {image_path}: {e}")
+
+                    # Delete thumbnails from local storage
+                    if photo.thumbnail_small:
+                        thumb_small_path = os.path.join(settings.MEDIA_ROOT, photo.thumbnail_small)
+                        if os.path.exists(thumb_small_path):
+                            try:
+                                os.remove(thumb_small_path)
+                            except OSError as e:
+                                print(f"Warning: Could not delete thumbnail {thumb_small_path}: {e}")
+
+                    if photo.thumbnail_medium:
+                        thumb_medium_path = os.path.join(settings.MEDIA_ROOT, photo.thumbnail_medium)
+                        if os.path.exists(thumb_medium_path):
+                            try:
+                                os.remove(thumb_medium_path)
+                            except OSError as e:
+                                print(f"Warning: Could not delete thumbnail {thumb_medium_path}: {e}")
 
                     # Delete photo record
                     deleted_photos.append({

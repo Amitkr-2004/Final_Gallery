@@ -200,24 +200,191 @@
   margin: 0;
 }
 
-/* Upload Progress */
+/* Upload Progress - FotoOwl Style */
 .upload-progress-container {
-  padding: 40px 20px;
-}
-
-.upload-progress-icon {
-  font-size: 60px;
-  margin-bottom: 20px;
+  padding: 50px 30px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+}
+
+/* Circular Progress */
+.circular-progress-wrapper {
+  margin-bottom: 24px;
+}
+
+.circular-progress {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.progress-ring-bg {
+  stroke: rgba(255, 255, 255, 0.2);
+}
+
+.progress-ring-fill {
+  transition: stroke-dashoffset 0.35s ease-out, stroke 0.35s ease;
+}
+
+.progress-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-percentage {
+  font-size: 28px;
+  font-weight: 700;
   color: white;
+  letter-spacing: -1px;
 }
 
-.upload-progress-icon svg {
-  stroke-width: 1.5;
+/* Status Title */
+.upload-status-title {
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.3px;
 }
 
+/* File Counter */
+.upload-file-counter {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0 0 6px 0;
+}
+
+/* Current File Name */
+.upload-current-file {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  margin: 0 0 24px 0;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+
+/* Stats Grid */
+.upload-stats-grid {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.upload-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  min-width: 80px;
+}
+
+.upload-stat-item svg {
+  stroke-width: 2;
+}
+
+.upload-stat-item.success svg {
+  color: #22c55e;
+}
+
+.upload-stat-item.skipped svg {
+  color: #f59e0b;
+}
+
+.upload-stat-item.failed svg {
+  color: #ef4444;
+}
+
+.upload-stat-item.cancelled svg {
+  color: #ef4444;
+}
+
+.upload-stat-item .stat-number {
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+
+.upload-stat-item .stat-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+/* Cancel Button */
+.cancel-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.cancel-upload-btn:hover {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: rgba(239, 68, 68, 0.9);
+  transform: scale(1.02);
+}
+
+.cancel-upload-btn:active {
+  transform: scale(0.98);
+}
+
+.cancel-upload-btn svg {
+  stroke-width: 2.5;
+}
+
+/* Redirect Message */
+.upload-redirect-message {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  margin-top: 16px;
+  font-weight: 500;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Legacy spinner - keep for compatibility */
 .spinner {
   width: 60px;
   height: 60px;
@@ -231,37 +398,6 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-.upload-progress-title {
-  color: white;
-  font-size: 28px;
-  font-weight: 600;
-  margin: 0 0 20px 0;
-}
-
-.upload-progress-stats {
-  color: white;
-  font-size: 18px;
-  line-height: 1.8;
-}
-
-.upload-progress-stats p {
-  margin: 8px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.upload-progress-stats svg {
-  vertical-align: middle;
-}
-
-.upload-redirect-message {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
-  margin-top: 20px;
-  font-style: italic;
 }
 
 /* Stats Section */

@@ -7,8 +7,25 @@
   "storage": {
     "appDataPath": "./app-data",
     "uploadPath": "./app-data/uploads",
+    "originalsPath": "./app-data/uploads/originals",
+    "compressedPath": "./app-data/uploads/compressed",
+    "thumbnailsPath": "./app-data/uploads/thumbnails",
     "databasePath": "./app-data/database",
     "logsPath": "./app-data/logs"
+  },
+  "compression": {
+    "compressed": {
+      "maxWidth": 1920,
+      "maxHeight": 1080,
+      "quality": 80,
+      "format": "jpeg"
+    },
+    "thumbnail": {
+      "width": 300,
+      "height": 300,
+      "quality": 70,
+      "format": "jpeg"
+    }
   },
   "ui": {
     "windowWidth": 1200,

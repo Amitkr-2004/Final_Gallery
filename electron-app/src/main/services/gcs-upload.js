@@ -83,7 +83,7 @@ function isReady() {
 }
 
 /**
- * Upload image file to GCS
+ * Upload image file to GCS (legacy - uploads to images/ folder)
  * @param {string} localPath - Local file path
  * @param {string} collectionId - Collection ID for organizing
  * @param {string} imageId - Image ID
@@ -146,6 +146,200 @@ async function uploadImage(localPath, collectionId, imageId) {
       success: false,
       error: error.message
     };
+  }
+}
+
+/**
+ * Upload original image to GCS (full quality for downloads)
+ * @param {string} localPath - Local file path
+ * @param {string} collectionId - Collection ID for organizing
+ * @param {string} imageId - Image ID
+ * @returns {Promise<{success: boolean, gcsPath?: string, error?: string}>}
+ */
+async function uploadOriginalImage(localPath, collectionId, imageId) {
+  if (!isReady()) {
+    return { success: false, error: 'GCS service not initialized' };
+  }
+
+  try {
+    const ext = path.extname(localPath) || '.jpg';
+    const gcsPath = `originals/${collectionId}/${imageId}${ext}`;
+
+    const fsSync = require('fs');
+    if (!fsSync.existsSync(localPath)) {
+      logger.error('Original file not found for GCS upload', { localPath, imageId });
+      return { success: false, error: `Local file not found: ${localPath}` };
+    }
+
+    await bucket.upload(localPath, {
+      destination: gcsPath,
+      metadata: {
+        contentType: getContentType(ext),
+        metadata: {
+          imageId,
+          collectionId,
+          version: 'original',
+          uploadedAt: new Date().toISOString()
+        }
+      }
+    });
+
+    logger.info('✅ Original image uploaded to GCS', { imageId, gcsPath });
+
+    return {
+      success: true,
+      gcsPath: `gs://${config.bucket.name}/${gcsPath}`
+    };
+  } catch (error) {
+    logger.error('❌ Failed to upload original image to GCS', {
+      imageId,
+      localPath,
+      error: error.message
+    });
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Upload compressed image to GCS (web-optimized for display)
+ * @param {string} localPath - Local file path
+ * @param {string} collectionId - Collection ID for organizing
+ * @param {string} imageId - Image ID
+ * @returns {Promise<{success: boolean, gcsPath?: string, error?: string}>}
+ */
+async function uploadCompressedImage(localPath, collectionId, imageId) {
+  if (!isReady()) {
+    return { success: false, error: 'GCS service not initialized' };
+  }
+
+  try {
+    const gcsPath = `compressed/${collectionId}/${imageId}.jpg`;
+
+    const fsSync = require('fs');
+    if (!fsSync.existsSync(localPath)) {
+      logger.error('Compressed file not found for GCS upload', { localPath, imageId });
+      return { success: false, error: `Local file not found: ${localPath}` };
+    }
+
+    await bucket.upload(localPath, {
+      destination: gcsPath,
+      metadata: {
+        contentType: 'image/jpeg',
+        metadata: {
+          imageId,
+          collectionId,
+          version: 'compressed',
+          uploadedAt: new Date().toISOString()
+        }
+      }
+    });
+
+    logger.info('✅ Compressed image uploaded to GCS', { imageId, gcsPath });
+
+    return {
+      success: true,
+      gcsPath: `gs://${config.bucket.name}/${gcsPath}`
+    };
+  } catch (error) {
+    logger.error('❌ Failed to upload compressed image to GCS', {
+      imageId,
+      localPath,
+      error: error.message
+    });
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Upload thumbnail to GCS (for gallery grid)
+ * @param {string} localPath - Local file path
+ * @param {string} collectionId - Collection ID for organizing
+ * @param {string} imageId - Image ID
+ * @returns {Promise<{success: boolean, gcsPath?: string, error?: string}>}
+ */
+async function uploadThumbnail(localPath, collectionId, imageId) {
+  if (!isReady()) {
+    return { success: false, error: 'GCS service not initialized' };
+  }
+
+  try {
+    const gcsPath = `thumbnails/${collectionId}/${imageId}_thumb.jpg`;
+
+    const fsSync = require('fs');
+    if (!fsSync.existsSync(localPath)) {
+      logger.error('Thumbnail file not found for GCS upload', { localPath, imageId });
+      return { success: false, error: `Local file not found: ${localPath}` };
+    }
+
+    await bucket.upload(localPath, {
+      destination: gcsPath,
+      metadata: {
+        contentType: 'image/jpeg',
+        metadata: {
+          imageId,
+          collectionId,
+          version: 'thumbnail',
+          uploadedAt: new Date().toISOString()
+        }
+      }
+    });
+
+    logger.info('✅ Thumbnail uploaded to GCS', { imageId, gcsPath });
+
+    return {
+      success: true,
+      gcsPath: `gs://${config.bucket.name}/${gcsPath}`
+    };
+  } catch (error) {
+    logger.error('❌ Failed to upload thumbnail to GCS', {
+      imageId,
+      localPath,
+      error: error.message
+    });
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Download original image from GCS (for download feature)
+ * @param {string} gcsPath - GCS path to the original image
+ * @param {string} destPath - Local destination path
+ * @returns {Promise<{success: boolean, localPath?: string, error?: string}>}
+ */
+async function downloadOriginalFromGCS(gcsPath, destPath) {
+  if (!isReady()) {
+    return { success: false, error: 'GCS service not initialized' };
+  }
+
+  try {
+    // Extract file path from gs:// URL if provided
+    let filePath = gcsPath;
+    if (gcsPath.startsWith('gs://')) {
+      filePath = gcsPath.replace(`gs://${config.bucket.name}/`, '');
+    }
+
+    const file = bucket.file(filePath);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      return { success: false, error: 'File not found in GCS' };
+    }
+
+    await file.download({ destination: destPath });
+
+    logger.info('✅ Original downloaded from GCS', { gcsPath: filePath, destPath });
+
+    return {
+      success: true,
+      localPath: destPath
+    };
+  } catch (error) {
+    logger.error('❌ Failed to download original from GCS', {
+      gcsPath,
+      destPath,
+      error: error.message
+    });
+    return { success: false, error: error.message };
   }
 }
 
@@ -276,6 +470,7 @@ async function uploadEmbeddingToFirestore(embeddingData) {
 
 /**
  * Sync a single image and all its faces to GCP
+ * Uploads original, compressed, and thumbnail versions
  * @param {string} imageId - Image ID to sync
  * @returns {Promise<{success: boolean, results: object, error?: string}>}
  */
@@ -287,7 +482,7 @@ async function syncImage(imageId) {
   try {
     logger.info('Starting image sync', { imageId });
 
-    // Get image data from database
+    // Get image data from database (including compression paths)
     const image = db.prepare(`
       SELECT * FROM images WHERE image_id = ?
     `).get(imageId);
@@ -307,7 +502,39 @@ async function syncImage(imageId) {
 
     const collectionId = face?.collection_id || 'uncategorized';
 
-    // Upload image
+    // Upload all image versions
+    let originalUpload = { success: false };
+    let compressedUpload = { success: false };
+    let thumbnailUpload = { success: false };
+
+    // 1. Upload original (if available)
+    if (image.original_path) {
+      originalUpload = await uploadOriginalImage(image.original_path, collectionId, imageId);
+      if (originalUpload.success) {
+        db.prepare(`UPDATE images SET original_gcs_path = ? WHERE image_id = ?`)
+          .run(originalUpload.gcsPath, imageId);
+      }
+    }
+
+    // 2. Upload compressed (if available)
+    if (image.compressed_path) {
+      compressedUpload = await uploadCompressedImage(image.compressed_path, collectionId, imageId);
+      if (compressedUpload.success) {
+        db.prepare(`UPDATE images SET compressed_gcs_path = ? WHERE image_id = ?`)
+          .run(compressedUpload.gcsPath, imageId);
+      }
+    }
+
+    // 3. Upload thumbnail (if available)
+    if (image.thumbnail_path) {
+      thumbnailUpload = await uploadThumbnail(image.thumbnail_path, collectionId, imageId);
+      if (thumbnailUpload.success) {
+        db.prepare(`UPDATE images SET thumbnail_gcs_path = ? WHERE image_id = ?`)
+          .run(thumbnailUpload.gcsPath, imageId);
+      }
+    }
+
+    // 4. Upload the main image (fallback, or for backwards compatibility)
     const imageUpload = await uploadImage(image.image_path, collectionId, imageId);
     if (!imageUpload.success) {
       throw new Error(`Failed to upload image: ${imageUpload.error}`);
@@ -330,6 +557,11 @@ async function syncImage(imageId) {
 
     const results = {
       image: imageUpload,
+      imageVersions: {
+        original: originalUpload,
+        compressed: compressedUpload,
+        thumbnail: thumbnailUpload
+      },
       faces: [],
       metadata: [],
       embeddings: { gcs: [], firestore: [] }
@@ -801,6 +1033,10 @@ module.exports = {
   initialize,
   isReady,
   uploadImage,
+  uploadOriginalImage,
+  uploadCompressedImage,
+  uploadThumbnail,
+  downloadOriginalFromGCS,
   uploadFaceMetadata,
   uploadEmbeddingToGCS,
   uploadEmbeddingToFirestore,

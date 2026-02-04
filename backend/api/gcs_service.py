@@ -108,10 +108,11 @@ def upload_image_to_gcs(photo, local_image_path):
 
     try:
         # Determine GCS path based on event_id or uncategorized
+        # Store original in 'originals/' folder
         if photo.event_id:
-            gcs_path = f"images/{photo.event_id}/{photo.image_hash}{os.path.splitext(photo.file_path)[1]}"
+            gcs_path = f"originals/{photo.event_id}/{photo.image_hash}{os.path.splitext(photo.file_path)[1]}"
         else:
-            gcs_path = f"images/uncategorized/{photo.image_hash}{os.path.splitext(photo.file_path)[1]}"
+            gcs_path = f"originals/uncategorized/{photo.image_hash}{os.path.splitext(photo.file_path)[1]}"
 
         # Upload the file
         blob = bucket.blob(gcs_path)
@@ -125,11 +126,62 @@ def upload_image_to_gcs(photo, local_image_path):
 
         blob.upload_from_filename(local_image_path, content_type=content_type)
 
-        logger.info(f"Uploaded image to GCS: {gcs_path}")
+        logger.info(f"Uploaded original image to GCS: {gcs_path}")
         return {'success': True, 'gcs_path': gcs_path, 'error': None}
 
     except Exception as e:
         logger.error(f"Failed to upload image to GCS: {e}")
+        return {'success': False, 'gcs_path': None, 'error': str(e)}
+
+
+def upload_thumbnail_to_gcs(photo, thumbnail_type='small'):
+    """
+    Upload a thumbnail to Google Cloud Storage.
+
+    Args:
+        photo: Photo model instance with thumbnail paths
+        thumbnail_type: 'small' or 'medium'
+
+    Returns:
+        dict: {success: bool, gcs_path: str, error: str}
+    """
+    if not is_gcs_configured():
+        return {'success': False, 'gcs_path': None, 'error': 'GCS not configured'}
+
+    bucket = get_gcs_bucket()
+    if not bucket:
+        return {'success': False, 'gcs_path': None, 'error': 'Failed to get GCS bucket'}
+
+    try:
+        # Get local thumbnail path
+        if thumbnail_type == 'small':
+            local_path = photo.thumbnail_small
+        else:
+            local_path = photo.thumbnail_medium
+
+        if not local_path:
+            return {'success': False, 'gcs_path': None, 'error': f'No {thumbnail_type} thumbnail path'}
+
+        # Full local path
+        full_local_path = os.path.join(settings.MEDIA_ROOT, local_path)
+        if not os.path.exists(full_local_path):
+            return {'success': False, 'gcs_path': None, 'error': f'Thumbnail file not found: {full_local_path}'}
+
+        # Determine GCS path
+        if photo.event_id:
+            gcs_path = f"thumbnails/{thumbnail_type}/{photo.event_id}/{photo.image_hash}.jpg"
+        else:
+            gcs_path = f"thumbnails/{thumbnail_type}/uncategorized/{photo.image_hash}.jpg"
+
+        # Upload the file
+        blob = bucket.blob(gcs_path)
+        blob.upload_from_filename(full_local_path, content_type='image/jpeg')
+
+        logger.info(f"Uploaded {thumbnail_type} thumbnail to GCS: {gcs_path}")
+        return {'success': True, 'gcs_path': gcs_path, 'error': None}
+
+    except Exception as e:
+        logger.error(f"Failed to upload thumbnail to GCS: {e}")
         return {'success': False, 'gcs_path': None, 'error': str(e)}
 
 
@@ -238,6 +290,7 @@ def sync_photo_to_gcs(photo, local_image_path, matched_persons=None):
     """
     Sync a photo and related data to GCS.
     This is the main function to call after image upload and face detection.
+    Uploads: original image + thumbnails (small & medium)
 
     Args:
         photo: Photo model instance
@@ -248,6 +301,7 @@ def sync_photo_to_gcs(photo, local_image_path, matched_persons=None):
         dict: {
             success: bool,
             image_uploaded: bool,
+            thumbnails_uploaded: dict,
             collections_synced: int,
             embeddings_synced: int,
             errors: list
@@ -257,6 +311,8 @@ def sync_photo_to_gcs(photo, local_image_path, matched_persons=None):
         'success': True,
         'image_uploaded': False,
         'image_gcs_path': None,
+        'thumbnails_uploaded': {'small': False, 'medium': False},
+        'thumbnail_gcs_paths': {'small': None, 'medium': None},
         'collections_synced': 0,
         'embeddings_synced': 0,
         'errors': []
@@ -268,13 +324,30 @@ def sync_photo_to_gcs(photo, local_image_path, matched_persons=None):
         logger.info("GCS sync skipped - not configured")
         return result
 
-    # 1. Upload the image
+    # 1. Upload the original image
     image_result = upload_image_to_gcs(photo, local_image_path)
     if image_result['success']:
         result['image_uploaded'] = True
         result['image_gcs_path'] = image_result['gcs_path']
     else:
         result['errors'].append(f"Image upload failed: {image_result['error']}")
+
+    # 2. Upload thumbnails
+    if photo.thumbnail_small:
+        small_result = upload_thumbnail_to_gcs(photo, 'small')
+        if small_result['success']:
+            result['thumbnails_uploaded']['small'] = True
+            result['thumbnail_gcs_paths']['small'] = small_result['gcs_path']
+        else:
+            result['errors'].append(f"Small thumbnail upload failed: {small_result['error']}")
+
+    if photo.thumbnail_medium:
+        medium_result = upload_thumbnail_to_gcs(photo, 'medium')
+        if medium_result['success']:
+            result['thumbnails_uploaded']['medium'] = True
+            result['thumbnail_gcs_paths']['medium'] = medium_result['gcs_path']
+        else:
+            result['errors'].append(f"Medium thumbnail upload failed: {medium_result['error']}")
 
     # 2. Sync collections and embeddings for matched persons
     if matched_persons:
@@ -299,7 +372,8 @@ def sync_photo_to_gcs(photo, local_image_path, matched_persons=None):
     if result['errors']:
         result['success'] = False
 
-    logger.info(f"GCS sync complete for photo {photo.id}: image={result['image_uploaded']}, "
+    logger.info(f"GCS sync complete for photo {photo.id}: original={result['image_uploaded']}, "
+                f"thumbnails={result['thumbnails_uploaded']}, "
                 f"collections={result['collections_synced']}, embeddings={result['embeddings_synced']}")
 
     return result
@@ -307,42 +381,55 @@ def sync_photo_to_gcs(photo, local_image_path, matched_persons=None):
 
 def delete_image_from_gcs(photo):
     """
-    Delete an image from Google Cloud Storage.
+    Delete an image and its thumbnails from Google Cloud Storage.
 
     Args:
         photo: Photo model instance
 
     Returns:
-        dict: {success: bool, deleted_path: str, error: str}
+        dict: {success: bool, deleted_paths: list, error: str}
     """
     if not is_gcs_configured():
-        return {'success': True, 'deleted_path': None, 'error': 'GCS not configured (skip)'}
+        return {'success': True, 'deleted_paths': [], 'error': 'GCS not configured (skip)'}
 
     bucket = get_gcs_bucket()
     if not bucket:
-        return {'success': False, 'deleted_path': None, 'error': 'Failed to get GCS bucket'}
+        return {'success': False, 'deleted_paths': [], 'error': 'Failed to get GCS bucket'}
+
+    deleted_paths = []
+    errors = []
 
     try:
-        # Determine GCS path based on event_id or uncategorized
         ext = os.path.splitext(photo.file_path)[1] if photo.file_path else '.jpg'
-        if photo.event_id:
-            gcs_path = f"images/{photo.event_id}/{photo.image_hash}{ext}"
-        else:
-            gcs_path = f"images/uncategorized/{photo.image_hash}{ext}"
+        event_folder = photo.event_id if photo.event_id else 'uncategorized'
 
-        # Check if blob exists and delete
-        blob = bucket.blob(gcs_path)
-        if blob.exists():
-            blob.delete()
-            logger.info(f"Deleted image from GCS: {gcs_path}")
-            return {'success': True, 'deleted_path': gcs_path, 'error': None}
+        # Paths to delete: original + thumbnails
+        paths_to_delete = [
+            f"originals/{event_folder}/{photo.image_hash}{ext}",
+            f"thumbnails/small/{event_folder}/{photo.image_hash}.jpg",
+            f"thumbnails/medium/{event_folder}/{photo.image_hash}.jpg",
+            # Legacy path (in case old images were stored here)
+            f"images/{event_folder}/{photo.image_hash}{ext}",
+        ]
+
+        for gcs_path in paths_to_delete:
+            try:
+                blob = bucket.blob(gcs_path)
+                if blob.exists():
+                    blob.delete()
+                    deleted_paths.append(gcs_path)
+                    logger.info(f"Deleted from GCS: {gcs_path}")
+            except Exception as e:
+                errors.append(f"{gcs_path}: {str(e)}")
+
+        if deleted_paths:
+            return {'success': True, 'deleted_paths': deleted_paths, 'error': None}
         else:
-            logger.warning(f"Image not found in GCS (already deleted?): {gcs_path}")
-            return {'success': True, 'deleted_path': gcs_path, 'error': 'File not found in GCS'}
+            return {'success': True, 'deleted_paths': [], 'error': 'No files found in GCS'}
 
     except Exception as e:
         logger.error(f"Failed to delete image from GCS: {e}")
-        return {'success': False, 'deleted_path': None, 'error': str(e)}
+        return {'success': False, 'deleted_paths': deleted_paths, 'error': str(e)}
 
 
 def delete_collection_from_gcs(person_id):

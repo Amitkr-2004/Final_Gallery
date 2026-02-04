@@ -2,6 +2,7 @@
  * Upload IPC Handlers - Simplified
  * Handles: core:upload:* (select files, select folder, upload to local)
  * Now syncs uploads to Django backend for GCS sync
+ * Includes image compression for optimized storage
  */
 
 const { dialog } = require('electron');
@@ -11,6 +12,7 @@ const fssync = require('fs');
 const crypto = require('crypto');
 const { getDatabase } = require('../database/schema');
 const faceProcessing = require('../services/face-processing');
+const imageCompression = require('../services/image-compression');
 const FormData = require('form-data');
 
 // Django API URL for syncing uploads (use 127.0.0.1 instead of localhost to avoid IPv6 issues)
@@ -133,6 +135,11 @@ async function getAllImageFiles(dirPath, allowedExtensions) {
 let uploadCancelled = false;
 
 function registerUploadHandlers(ipcMain, getService) {
+  // Initialize compression service
+  const logger = getService('logger');
+  const configService = getService('configService');
+  imageCompression.initialize(logger, configService);
+
   /**
    * Cancel ongoing upload
    * Channel: core:upload:cancel
@@ -296,8 +303,37 @@ function registerUploadHandlers(ipcMain, getService) {
           const uniqueFilename = `${date}_${timestamp}_${filename}`;
           const destPath = path.join(uploadDir, uniqueFilename);
 
-          // Copy file to upload directory
+          // Copy file to upload directory (temporary, will be moved to originals)
           await fs.copyFile(sourcePath, destPath);
+
+          // Process image with compression (creates original, compressed, thumbnail)
+          let compressionResult = null;
+          try {
+            compressionResult = await imageCompression.processUploadWithCompression(
+              destPath,
+              filename,
+              uniqueFilename
+            );
+
+            if (compressionResult.success) {
+              logger.info('Image compression complete', {
+                filename,
+                originalSize: compressionResult.sizes.original,
+                compressedSize: compressionResult.sizes.compressed,
+                compressionRatio: (compressionResult.compressionRatio * 100).toFixed(1) + '%'
+              });
+            } else {
+              logger.warn('Compression failed, using original', {
+                filename,
+                error: compressionResult.error
+              });
+            }
+          } catch (compressError) {
+            logger.warn('Compression service error', {
+              filename,
+              error: compressError.message
+            });
+          }
 
           // Save to database with hash
           const stmt = db.prepare(`
@@ -319,14 +355,60 @@ function registerUploadHandlers(ipcMain, getService) {
               filename: uniqueFilename,
               filepath: destPath,
               size: stat.size,
-              hash: fileHash
+              hash: fileHash,
+              compression: compressionResult ? {
+                originalPath: compressionResult.paths?.original,
+                compressedPath: compressionResult.paths?.compressed,
+                thumbnailPath: compressionResult.paths?.thumbnail,
+                compressionRatio: compressionResult.compressionRatio
+              } : null
             });
 
             logger.info('File uploaded', { filename, destPath, hash: fileHash });
 
-            // Trigger local face detection (async, non-blocking)
+            // Trigger local face detection using compressed image for better performance
             try {
-              await faceProcessing.processImage(destPath, filename, fileHash, stat.size);
+              const imageForProcessing = compressionResult?.compressedForFaceProcessing || destPath;
+              await faceProcessing.processImage(imageForProcessing, filename, fileHash, stat.size);
+
+              // Update images table with compression paths if face processing succeeded
+              if (compressionResult?.success) {
+                try {
+                  // Find the image_id that was just created by face processing
+                  const imageRecord = db.prepare(`
+                    SELECT image_id FROM images WHERE file_hash = ? ORDER BY upload_time DESC LIMIT 1
+                  `).get(fileHash);
+
+                  if (imageRecord) {
+                    db.prepare(`
+                      UPDATE images SET
+                        original_path = ?,
+                        compressed_path = ?,
+                        thumbnail_path = ?,
+                        original_size = ?,
+                        compressed_size = ?,
+                        compression_ratio = ?
+                      WHERE image_id = ?
+                    `).run(
+                      compressionResult.paths.original,
+                      compressionResult.paths.compressed,
+                      compressionResult.paths.thumbnail,
+                      compressionResult.sizes.original,
+                      compressionResult.sizes.compressed,
+                      compressionResult.compressionRatio,
+                      imageRecord.image_id
+                    );
+                    logger.info('Updated image record with compression paths', {
+                      imageId: imageRecord.image_id,
+                      originalPath: compressionResult.paths.original
+                    });
+                  }
+                } catch (dbError) {
+                  logger.warn('Failed to update compression paths in images table', {
+                    error: dbError.message
+                  });
+                }
+              }
             } catch (faceError) {
               logger.warn('Face processing failed for image', {
                 filename,

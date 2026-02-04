@@ -264,6 +264,36 @@ function createTables(logger) {
     logger.warn('Error adding sync columns to images table', { error: error.message });
   }
 
+  // Migration: Add compression-related columns to images table
+  try {
+    const imagesTableInfo = db.pragma('table_info(images)');
+    const columnNames = imagesTableInfo.map(col => col.name);
+
+    const compressionColumns = [
+      // Local paths for different versions
+      { name: 'original_path', type: 'TEXT' },
+      { name: 'compressed_path', type: 'TEXT' },
+      { name: 'thumbnail_path', type: 'TEXT' },
+      // GCS paths for different versions
+      { name: 'original_gcs_path', type: 'TEXT' },
+      { name: 'compressed_gcs_path', type: 'TEXT' },
+      { name: 'thumbnail_gcs_path', type: 'TEXT' },
+      // Size tracking
+      { name: 'original_size', type: 'INTEGER' },
+      { name: 'compressed_size', type: 'INTEGER' },
+      { name: 'compression_ratio', type: 'REAL' }
+    ];
+
+    for (const col of compressionColumns) {
+      if (!columnNames.includes(col.name)) {
+        db.exec(`ALTER TABLE images ADD COLUMN ${col.name} ${col.type}`);
+        logger.info(`Added ${col.name} column to images table`);
+      }
+    }
+  } catch (error) {
+    logger.warn('Error adding compression columns to images table', { error: error.message });
+  }
+
   // Migration: Add GCP sync tracking columns to faces table
   try {
     const facesTableInfo = db.pragma('table_info(faces)');

@@ -47,6 +47,8 @@ Face Gallery is a desktop application that automatically:
 - ✅ **Local Database** - SQLite for offline-first architecture
 - ✅ **Crash-Safe Uploads** - Resumable sync with status tracking
 - ✅ **IPC-Based Image Loading** - Reliable image display via base64 data URLs
+- ✅ **Image Compression** - Automatic thumbnail generation (small 200x200, medium 800x800)
+- ✅ **Django-GCS Sync** - Automatic sync between local database and cloud storage
 
 ### ML Features
 - **Face Detection**: SSD MobileNet V1 (50-200ms per image)
@@ -60,6 +62,9 @@ Face Gallery is a desktop application that automatically:
 - **Lucide React Icons** - Professional SVG icons throughout the app
 - **Responsive Grid Gallery** - Auto-fill image grid with hover effects
 - **Loading States** - Spinner animations for async operations
+- **FotoOwl-style Upload Progress** - Circular progress indicator with percentage
+- **Pinterest-style Scanner Gallery** - Masonry grid layout for matched photos
+- **Lightbox Image Viewer** - Full-screen viewing with download option
 
 ---
 
@@ -326,6 +331,38 @@ await window.electronAPI.scanner.cleanupTemp()
 
 **See [FACE_SCANNER_API.md](./FACE_SCANNER_API.md) for complete documentation and examples.**
 
+### Django Management Commands
+
+```bash
+# Clear all data (local only)
+python manage.py clear_all_data
+
+# Clear all data including GCS
+python manage.py clear_all_data --include-gcs
+
+# Skip confirmation prompt
+python manage.py clear_all_data --include-gcs --yes
+```
+
+### Face Scanner Web Page
+
+The standalone face scanner is available at `camera-scanner.html`:
+
+```bash
+# Serve with HTTP server (required for camera access)
+python3 -m http.server 8088
+
+# Open in browser
+http://localhost:8088/camera-scanner.html
+```
+
+**Features:**
+- Camera-based face scanning
+- Pinterest-style gallery for matched photos
+- Individual photo download
+- Lightbox for full-screen viewing
+- "Scan Again" button to return to scanner
+
 ---
 
 ## 🚀 Development Stages
@@ -397,6 +434,75 @@ await window.electronAPI.scanner.cleanupTemp()
   - `src/main/index.js` - Protocol handler
   - `src/main/ipc/gallery-handlers.js` - Image data IPC
   - `src/renderer/preload.js` - Gallery API exposure
+
+### Stage 7: Image Compression & Thumbnails ✅
+- **Objective:** Optimize storage with automatic thumbnail generation
+- **Implementation:**
+  - Original images stored at full quality
+  - Small thumbnails (200x200) for gallery grid
+  - Medium thumbnails (800x800) for preview
+  - Integrated into upload pipeline
+  - Synced to GCS with proper folder structure
+- **Storage Structure:**
+  ```
+  Local:
+  ├── images/{hash}.jpeg          # Original
+  ├── thumbnails/small/{hash}.jpg # 200x200
+  └── thumbnails/medium/{hash}.jpg # 800x800
+
+  GCS:
+  ├── originals/uncategorized/{hash}.jpeg
+  ├── thumbnails/small/uncategorized/{hash}.jpg
+  └── thumbnails/medium/uncategorized/{hash}.jpg
+  ```
+- **Files Modified:**
+  - `backend/api/utils.py` - Thumbnail generation functions
+  - `backend/api/views.py` - Upload integration
+  - `backend/api/gcs_service.py` - GCS upload for thumbnails
+  - `backend/api/delete_views.py` - Delete thumbnails on photo removal
+
+### Stage 8: Django-GCS Sync ✅
+- **Objective:** Keep Django database and GCS in perfect sync
+- **Implementation:**
+  - Automatic upload sync (original + 2 thumbnails per photo)
+  - Automatic delete sync (removes from both Django and GCS)
+  - `--include-gcs` flag for `clear_all_data` management command
+  - Parallel deletion with ThreadPoolExecutor for faster cleanup
+- **Files Modified:**
+  - `backend/api/gcs_service.py` - Sync functions
+  - `backend/api/delete_views.py` - Cascade deletion to GCS
+  - `backend/api/management/commands/clear_all_data.py` - GCS clearing
+
+### Stage 9: FotoOwl-style Upload Progress UI ✅
+- **Objective:** Modern, user-friendly upload progress display
+- **Implementation:**
+  - Circular SVG progress ring with percentage
+  - File counter ("3 of 10 files")
+  - Current filename display
+  - Stats grid (Uploaded/Skipped/Failed/Cancelled)
+  - Pill-shaped cancel button with hover effects
+  - Glassmorphism styling
+- **Files Modified:**
+  - `electron-app/src/renderer/pages/Dashboard.jsx` - Progress UI
+  - `electron-app/src/renderer/pages/Dashboard.css` - Circular progress styles
+
+### Stage 10: Pinterest-style Face Scanner Gallery ✅
+- **Objective:** Clean, user-friendly gallery after face scan
+- **Implementation:**
+  - Masonry grid layout (4 columns, responsive)
+  - Photos displayed immediately after successful scan
+  - Scanner view hidden, gallery view shown
+  - Floating "Scan Again" button
+  - Lightbox for full-screen viewing
+  - Individual download buttons on hover
+  - Removed technical details (Person #, Collection #, Match %)
+- **User Flow:**
+  1. Start camera → Scan face → Loading...
+  2. Match found → Scanner hides → Pinterest gallery appears
+  3. Click photo → Lightbox opens → Download option
+  4. Click "Scan Again" → Return to scanner
+- **File Modified:**
+  - `camera-scanner.html` - Complete redesign
 
 ---
 
@@ -527,6 +633,30 @@ electron-app/
 ├── gcp-service-account.json     # GCP credentials (gitignored)
 ├── package.json
 └── CLAUDE.md                    # This file
+
+backend/                          # Django Backend
+├── api/
+│   ├── models.py                # Photo, Person, PersonPhoto models
+│   ├── views.py                 # Upload API with thumbnail generation
+│   ├── delete_views.py          # Delete endpoints with GCS sync
+│   ├── gcs_service.py           # GCS upload/delete functions
+│   ├── utils.py                 # Thumbnail generation utilities
+│   ├── faiss_manager.py         # Face embedding search
+│   └── management/
+│       └── commands/
+│           └── clear_all_data.py # Clear all data command
+├── media/
+│   ├── images/                  # Original images
+│   ├── thumbnails/
+│   │   ├── small/              # 200x200 thumbnails
+│   │   └── medium/             # 800x800 thumbnails
+│   └── faces/                   # Cropped face images
+└── gallery/
+    └── settings.py              # Django settings
+
+Root Files:
+├── camera-scanner.html          # Standalone face scanner (Pinterest-style)
+└── CLAUDE.md                    # This documentation
 ```
 
 ---
@@ -561,11 +691,19 @@ electron-app/
 
 ```
 gs://your-bucket/
-├── images/
+├── originals/
 │   ├── {collection_id}/
-│   │   └── {image_id}.jpg
+│   │   └── {image_hash}.jpeg
 │   └── uncategorized/
-│       └── {image_id}.jpg
+│       └── {image_hash}.jpeg
+│
+├── thumbnails/
+│   ├── small/
+│   │   └── uncategorized/
+│   │       └── {image_hash}.jpg    # 200x200
+│   └── medium/
+│       └── uncategorized/
+│           └── {image_hash}.jpg    # 800x800
 │
 ├── metadata/
 │   └── faces/
@@ -577,6 +715,11 @@ gs://your-bucket/
 └── collections/
     └── {collection_id}.json
 ```
+
+**Note:** Each uploaded photo creates 3 files in GCS:
+- 1 original (full quality)
+- 1 small thumbnail (200x200)
+- 1 medium thumbnail (800x800)
 
 ### Sample Collection Metadata (`collections/{id}.json`)
 ```json
@@ -772,10 +915,21 @@ For issues and questions:
 ---
 
 **Last Updated:** February 4, 2026
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Status:** Production Ready ✅
 
 ### Changelog
+
+#### v1.2.0 (February 4, 2026)
+- ✅ **Image Compression** - Automatic thumbnail generation (200x200 small, 800x800 medium)
+- ✅ **Django-GCS Sync** - Perfect sync between local database and cloud storage
+- ✅ **FotoOwl-style Upload Progress** - Circular progress ring with percentage display
+- ✅ **Pinterest-style Scanner Gallery** - Masonry grid layout after face scan
+- ✅ **Lightbox Image Viewer** - Full-screen viewing with download option
+- ✅ **Floating "Scan Again" Button** - Easy navigation back to scanner
+- ✅ **Simplified Scanner UI** - Removed technical details (Person #, Collection #, Match %)
+- ✅ **`--include-gcs` Flag** - Clear GCS data with `clear_all_data` command
+- ✅ **Parallel GCS Deletion** - Faster cleanup with ThreadPoolExecutor
 
 #### v1.1.0 (February 4, 2026)
 - ✅ Rebranded UI for Orchids International School (maroon/gold theme)

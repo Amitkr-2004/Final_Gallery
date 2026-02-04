@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Camera Face Scanner - InsightFace</title>
+    <title>Face Scanner | Orchids Gallery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,90 +13,195 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #800020 0%, #5C0015 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f7;
             min-height: 100vh;
-            padding: 20px;
+            color: #1d1d1f;
         }
 
-        .container {
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e5e7;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #800020, #a64d5b);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .logo-text span {
+            color: #800020;
+        }
+
+        .header-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #f5f5f7;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #6e6e73;
+        }
+
+        .header-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #30d158;
+        }
+
+        .header-badge.disconnected .dot {
+            background: #ff3b30;
+        }
+
+        /* Main Content */
+        .main-content {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 40px;
+            padding: 32px;
         }
 
-        h1 {
-            color: #800020;
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 2.5em;
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
         }
 
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
+        .page-header-left {
+            display: flex;
+            flex-direction: column;
         }
 
-        .model-badge {
-            text-align: center;
-            margin-bottom: 20px;
+        .page-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 4px;
         }
 
-        .model-badge span {
-            background: linear-gradient(135deg, #228B22, #1B6B1B);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
+        .page-subtitle {
+            font-size: 15px;
+            color: #86868b;
         }
 
-        .grid {
+        /* Scanner View */
+        #scannerView {
+            transition: opacity 0.3s ease;
+        }
+
+        #scannerView.hidden {
+            display: none;
+        }
+
+        /* Gallery View */
+        #galleryView {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        #galleryView.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scanner Grid */
+        .scanner-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
+            gap: 24px;
         }
 
-        @media (max-width: 968px) {
-            .grid {
+        @media (max-width: 1024px) {
+            .scanner-grid {
                 grid-template-columns: 1fr;
             }
         }
 
-        .camera-section, .results-section {
-            background: #f7fafc;
-            padding: 25px;
-            border-radius: 15px;
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        .section-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #2d3748;
-            margin-bottom: 20px;
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f0f0f2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1d1d1f;
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .video-container {
+        .card-title svg {
+            width: 20px;
+            height: 20px;
+            color: #800020;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* Camera Section */
+        .video-wrapper {
             position: relative;
             background: #000;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
-            margin-bottom: 20px;
+            aspect-ratio: 16/10;
         }
 
         video {
             width: 100%;
-            display: block;
-            border-radius: 10px;
+            height: 100%;
+            object-fit: cover;
         }
 
         canvas {
@@ -107,60 +213,83 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 280px;
-            height: 350px;
-            border: 4px solid rgba(128, 0, 32, 0.8);
+            width: 200px;
+            height: 260px;
+            border: 3px solid rgba(255,255,255,0.5);
             border-radius: 50%;
             pointer-events: none;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-            z-index: 10;
+            transition: all 0.3s ease;
         }
 
-        .face-guide::before {
-            content: 'Position your face in the circle';
+        .face-guide.active {
+            border-color: #30d158;
+            box-shadow: 0 0 0 4px rgba(48, 209, 88, 0.2);
+        }
+
+        .face-guide-text {
             position: absolute;
-            top: -50px;
+            bottom: 24px;
             left: 50%;
             transform: translateX(-50%);
             color: white;
             font-size: 14px;
-            font-weight: bold;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            font-weight: 500;
+            text-align: center;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
             white-space: nowrap;
         }
 
-        .face-guide.active {
-            border-color: rgba(72, 187, 120, 0.9);
-            animation: pulse 2s infinite;
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
         }
 
-        @keyframes pulse {
-            0%, 100% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: translate(-50%, -50%) scale(1.05);
-                opacity: 0.8;
-            }
+        .status-badge.ready {
+            background: #e8f8ec;
+            color: #1d7a3e;
         }
 
+        .status-badge.scanning {
+            background: #e5f2ff;
+            color: #0066cc;
+        }
+
+        .status-badge.error {
+            background: #ffebe9;
+            color: #cf222e;
+        }
+
+        /* Buttons */
         .controls {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
         }
 
-        button {
+        .btn {
             flex: 1;
-            min-width: 150px;
-            padding: 15px 25px;
+            padding: 14px 20px;
             border: none;
             border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 15px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
         }
 
         .btn-primary {
@@ -169,249 +298,496 @@
         }
 
         .btn-primary:hover:not(:disabled) {
-            background: #5C0015;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(128, 0, 32, 0.4);
+            background: #6a001a;
         }
 
         .btn-success {
-            background: #228B22;
+            background: #30d158;
             color: white;
         }
 
         .btn-success:hover:not(:disabled) {
-            background: #1B6B1B;
-            transform: translateY(-2px);
+            background: #28b84c;
         }
 
         .btn-secondary {
-            background: #718096;
-            color: white;
+            background: #f5f5f7;
+            color: #1d1d1f;
         }
 
-        button:disabled {
-            opacity: 0.5;
+        .btn-secondary:hover:not(:disabled) {
+            background: #e8e8ed;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
-        .status {
-            text-align: center;
-            padding: 12px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-
-        .status.ready {
-            background: #c6f6d5;
-            color: #22543d;
-        }
-
-        .status.scanning {
-            background: #bee3f8;
-            color: #2c5282;
-        }
-
-        .status.error {
-            background: #fed7d7;
-            color: #742a2a;
-        }
-
-        .match-card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-left: 5px solid #800020;
-        }
-
-        .match-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .match-name {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #2d3748;
-        }
-
-        .similarity-badge {
-            padding: 8px 20px;
-            border-radius: 25px;
-            font-weight: bold;
-            font-size: 1.1em;
+        /* Floating Scan Again Button */
+        .floating-scan-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #800020;
             color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(128, 0, 32, 0.4);
+            transition: all 0.3s ease;
+            z-index: 100;
         }
 
-        .match-details {
-            color: #4a5568;
-            line-height: 1.8;
-            font-size: 0.95em;
+        .floating-scan-btn:hover {
+            background: #6a001a;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(128, 0, 32, 0.5);
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
+        .floating-scan-btn svg {
+            width: 20px;
+            height: 20px;
         }
 
-        .stat-box {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .stat-label {
-            font-size: 0.85em;
-            color: #a0aec0;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #800020;
-        }
-
-        .no-matches {
+        /* Results Placeholder */
+        .results-placeholder {
             text-align: center;
             padding: 60px 20px;
-            color: #a0aec0;
+            color: #86868b;
         }
 
-        .no-matches-icon {
-            font-size: 4em;
-            margin-bottom: 15px;
+        .results-placeholder svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.4;
         }
 
-        .images-gallery {
-            margin-top: 15px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
+        .results-placeholder p {
+            font-size: 15px;
         }
 
-        .gallery-image {
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-            cursor: pointer;
-        }
-
-        .gallery-image:hover {
-            transform: scale(1.05);
-        }
-
-        .gallery-image img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            display: block;
-        }
-
-        .image-loading {
-            width: 100%;
-            height: 200px;
-            background: #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #a0aec0;
-        }
-
-        .loading {
+        /* Loading State */
+        .loading-state {
             text-align: center;
             padding: 60px 20px;
         }
 
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #800020;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e5e5e7;
+            border-top-color: #800020;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
-        .api-status {
+        .loading-state p {
+            font-size: 14px;
+            color: #86868b;
+        }
+
+
+        /* Pinterest Masonry Grid */
+        .masonry-grid {
+            column-count: 4;
+            column-gap: 16px;
+        }
+
+        @media (max-width: 1200px) {
+            .masonry-grid { column-count: 3; }
+        }
+
+        @media (max-width: 900px) {
+            .masonry-grid { column-count: 2; }
+        }
+
+        @media (max-width: 600px) {
+            .masonry-grid { column-count: 1; }
+        }
+
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 16px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .masonry-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        .masonry-item img {
+            width: 100%;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .masonry-item:hover img {
+            transform: scale(1.02);
+        }
+
+        .masonry-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.6));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .masonry-item:hover .masonry-overlay {
+            opacity: 1;
+        }
+
+        .masonry-download-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .masonry-download-btn:hover {
+            background: #800020;
+            color: white;
+        }
+
+        .masonry-download-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* No Match State */
+        .no-match {
             text-align: center;
-            padding: 10px;
-            margin-bottom: 20px;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 16px;
+        }
+
+        .no-match-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #ffebe9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .no-match-icon svg {
+            width: 40px;
+            height: 40px;
+            color: #cf222e;
+        }
+
+        .no-match h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+        }
+
+        .no-match p {
+            font-size: 15px;
+            color: #86868b;
+            margin-bottom: 24px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .tips-box {
+            text-align: left;
+            background: #f5f5f7;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .tips-box h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 12px;
+        }
+
+        .tips-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .tips-box li {
+            font-size: 13px;
+            color: #6e6e73;
+            margin-bottom: 8px;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
             border-radius: 8px;
-            font-size: 0.9em;
         }
 
-        .api-status.connected {
-            background: #c6f6d5;
-            color: #22543d;
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
 
-        .api-status.disconnected {
-            background: #fed7d7;
-            color: #742a2a;
+        .lightbox-close:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .lightbox-close svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .lightbox-download {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: #800020;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .lightbox-download:hover {
+            background: #6a001a;
+        }
+
+        .lightbox-download svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: #86868b;
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: #800020;
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Orchids Gallery - Face Scanner</h1>
-        <p class="subtitle">Powered by InsightFace (512D ArcFace embeddings)</p>
-
-        <div class="model-badge">
-            <span>InsightFace buffalo_l + FAISS Vector Search</span>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+            </div>
+            <div class="logo-text">Orchids <span>Gallery</span></div>
         </div>
+        <div id="apiStatus" class="header-badge">
+            <span class="dot"></span>
+            <span>Checking connection...</span>
+        </div>
+    </header>
 
-        <div id="apiStatus" class="api-status">Checking API connection...</div>
-
-        <div class="grid">
-            <div class="camera-section">
-                <div class="section-title">
-                    <span></span>
-                    <span>Camera</span>
-                </div>
-
-                <div id="status" class="status ready">Ready to start camera</div>
-
-                <div class="video-container">
-                    <video id="video" autoplay playsinline></video>
-                    <div id="faceGuide" class="face-guide"></div>
-                    <canvas id="canvas"></canvas>
-                </div>
-
-                <div class="controls">
-                    <button id="startBtn" class="btn-primary">Start Camera</button>
-                    <button id="scanBtn" class="btn-success" disabled>Scan Face</button>
-                    <button id="stopBtn" class="btn-secondary" disabled>Stop Camera</button>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Scanner View -->
+        <div id="scannerView">
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1 class="page-title">Face Scanner</h1>
+                    <p class="page-subtitle">Find your photos using AI-powered face recognition</p>
                 </div>
             </div>
 
-            <div class="results-section">
-                <div class="section-title">
-                    <span></span>
-                    <span>Results</span>
+            <div class="scanner-grid">
+                <!-- Camera Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                            Camera
+                        </div>
+                        <div id="status" class="status-badge ready">Ready</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="video-wrapper">
+                            <video id="video" autoplay playsinline></video>
+                            <div id="faceGuide" class="face-guide"></div>
+                            <div class="face-guide-text">Position your face in the circle</div>
+                            <canvas id="canvas"></canvas>
+                        </div>
+                        <div class="controls">
+                            <button id="startBtn" class="btn btn-primary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                                Start Camera
+                            </button>
+                            <button id="scanBtn" class="btn btn-success" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                Scan Face
+                            </button>
+                            <button id="stopBtn" class="btn btn-secondary" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                                </svg>
+                                Stop
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div id="results">
-                    <div class="no-matches">
-                        <div class="no-matches-icon"></div>
-                        <div>Start camera and scan to see results</div>
+
+                <!-- Results Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                            Results
+                        </div>
+                    </div>
+                    <div class="card-body" id="results">
+                        <div class="results-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <p>Start camera and scan your face to find matching photos</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Gallery View (Clean Pinterest Style) -->
+        <div id="galleryView">
+            <!-- Floating Scan Again Button -->
+            <button class="floating-scan-btn" onclick="showScanner()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                Scan Again
+            </button>
+
+            <!-- Pinterest Masonry Grid -->
+            <div class="masonry-grid" id="masonryGrid">
+                <!-- Will be populated dynamically -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" onclick="closeLightbox()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+        <img id="lightboxImg" src="" alt="">
+        <button class="lightbox-download" id="lightboxDownload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download
+        </button>
     </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        Powered by InsightFace AI &bull; <a href="#">Orchids International School</a>
+    </footer>
 
     <script>
         const video = document.getElementById('video');
@@ -424,10 +800,23 @@
         const resultsDiv = document.getElementById('results');
         const apiStatusDiv = document.getElementById('apiStatus');
         const faceGuide = document.getElementById('faceGuide');
+        const scannerView = document.getElementById('scannerView');
+        const galleryView = document.getElementById('galleryView');
+        const masonryGrid = document.getElementById('masonryGrid');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const lightboxDownload = document.getElementById('lightboxDownload');
 
-        // Django backend with InsightFace
         const API_URL = 'http://localhost:8000';
         let stream = null;
+        let currentMatches = [];
+        let currentLightboxUrl = '';
+
+        // Update status badge
+        function updateStatus(text, type) {
+            statusDiv.textContent = text;
+            statusDiv.className = 'status-badge ' + type;
+        }
 
         // Check API status
         async function checkAPI() {
@@ -436,74 +825,181 @@
                 const data = await response.json();
 
                 if (data.status === 'ok' || data.success) {
-                    apiStatusDiv.textContent = 'API Connected (InsightFace + FAISS)';
-                    apiStatusDiv.className = 'api-status connected';
+                    apiStatusDiv.innerHTML = '<span class="dot"></span><span>Connected</span>';
+                    apiStatusDiv.classList.remove('disconnected');
                     return true;
                 }
             } catch (error) {
-                apiStatusDiv.textContent = 'Django Server Not Running - Start with: python manage.py runserver';
-                apiStatusDiv.className = 'api-status disconnected';
+                apiStatusDiv.innerHTML = '<span class="dot"></span><span>Server Offline</span>';
+                apiStatusDiv.classList.add('disconnected');
                 return false;
             }
         }
+
+        // Show Scanner View
+        function showScanner() {
+            galleryView.classList.remove('active');
+            scannerView.classList.remove('hidden');
+
+            // Reset camera UI
+            const capturedImg = document.getElementById('capturedImage');
+            if (capturedImg) {
+                capturedImg.style.display = 'none';
+            }
+            video.style.display = 'block';
+            faceGuide.style.display = 'block';
+            document.querySelector('.face-guide-text').style.display = 'block';
+
+            // Reset results
+            resultsDiv.innerHTML = `
+                <div class="results-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <p>Start camera and scan your face to find matching photos</p>
+                </div>
+            `;
+
+            updateStatus('Ready', 'ready');
+        }
+
+        // Show Gallery View (Clean Pinterest Style - No Headers)
+        function showGallery(result) {
+            scannerView.classList.add('hidden');
+            galleryView.classList.add('active');
+
+            const { matches } = result;
+            currentMatches = matches;
+
+            // Build clean Pinterest masonry grid
+            masonryGrid.innerHTML = matches.map((match, i) => `
+                <div class="masonry-item" onclick="openLightbox('${API_URL}${match.image_url}', 'photo_${match.image_id}.jpg')">
+                    <img src="${API_URL}${match.image_url}"
+                         alt="Photo ${i + 1}"
+                         loading="lazy"
+                         onerror="this.parentElement.style.display='none'">
+                    <div class="masonry-overlay">
+                        <button class="masonry-download-btn" onclick="event.stopPropagation(); downloadSingleImage('${API_URL}${match.image_url}', 'photo_${match.image_id}.jpg')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Lightbox functions
+        function openLightbox(imageUrl, filename) {
+            currentLightboxUrl = imageUrl;
+            lightboxImg.src = imageUrl;
+            lightboxDownload.onclick = () => downloadSingleImage(imageUrl, filename);
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close lightbox on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+                closeLightbox();
+            }
+        });
+
+        // Close lightbox when clicking outside image
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                closeLightbox();
+            }
+        });
 
         // Start camera
         startBtn.addEventListener('click', async () => {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        facingMode: 'user'
-                    }
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
                 });
 
-                video.srcObject = stream;
+                const capturedImg = document.getElementById('capturedImage');
+                if (capturedImg) {
+                    capturedImg.style.display = 'none';
+                }
+                video.style.display = 'block';
+                faceGuide.style.display = 'block';
+                document.querySelector('.face-guide-text').style.display = 'block';
 
+                video.srcObject = stream;
                 startBtn.disabled = true;
                 scanBtn.disabled = false;
                 stopBtn.disabled = false;
-
                 faceGuide.classList.add('active');
-
-                statusDiv.textContent = 'Camera active - Position your face in the circle';
-                statusDiv.className = 'status ready';
+                updateStatus('Camera Active', 'ready');
             } catch (error) {
-                statusDiv.textContent = 'Camera access denied';
-                statusDiv.className = 'status error';
+                updateStatus('Camera Denied', 'error');
                 alert('Camera access denied. Please allow camera access and try again.');
             }
         });
 
-        // Scan face using InsightFace API
+        // Scan face
         scanBtn.addEventListener('click', async () => {
             const apiOk = await checkAPI();
             if (!apiOk) {
-                alert('Django server not running. Start it with: python manage.py runserver');
+                alert('Server not running. Start Django with: python manage.py runserver');
                 return;
             }
 
             try {
                 scanBtn.disabled = true;
-                statusDiv.textContent = 'Scanning with InsightFace...';
-                statusDiv.className = 'status scanning';
+                stopBtn.disabled = true;
+                updateStatus('Scanning...', 'scanning');
 
-                resultsDiv.innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <div>Detecting face with InsightFace (512D ArcFace)...</div>
-                    </div>
-                `;
-
-                // Capture image
+                // Capture full frame
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0);
 
-                // Convert to blob
+                // Stop camera after capture
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                    stream = null;
+                }
+
+                // Show captured image
+                const capturedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                video.style.display = 'none';
+
+                let capturedImg = document.getElementById('capturedImage');
+                if (!capturedImg) {
+                    capturedImg = document.createElement('img');
+                    capturedImg.id = 'capturedImage';
+                    capturedImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                    video.parentNode.insertBefore(capturedImg, video);
+                }
+                capturedImg.src = capturedDataUrl;
+                capturedImg.style.display = 'block';
+
+                faceGuide.style.display = 'none';
+                document.querySelector('.face-guide-text').style.display = 'none';
+
+                resultsDiv.innerHTML = `
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Analyzing face with AI...</p>
+                    </div>
+                `;
+
                 const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
 
-                // Upload to Django InsightFace API
                 const formData = new FormData();
                 formData.append('image', blob, 'camera-capture.jpg');
 
@@ -515,38 +1011,27 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    if (result.matched) {
-                        // Fetch photos for this person
-                        await displayMatchedResults(result);
+                    if (result.matched && result.matches && result.matches.length > 0) {
+                        // Show Pinterest gallery
+                        showGallery(result);
                     } else {
+                        // No match - show in scanner view
                         displayNoMatch(result);
                     }
-                    statusDiv.textContent = 'Scan complete - Ready for next scan';
-                    statusDiv.className = 'status ready';
+                    updateStatus('Complete', 'ready');
                 } else {
-                    statusDiv.textContent = result.message || 'Scan failed';
-                    statusDiv.className = 'status error';
-                    resultsDiv.innerHTML = `
-                        <div class="no-matches">
-                            <div class="no-matches-icon"></div>
-                            <div><strong>${result.stage || 'Error'}</strong></div>
-                            <div style="margin-top: 10px;">${result.message || 'Scan failed'}</div>
-                        </div>
-                    `;
+                    updateStatus('Failed', 'error');
+                    displayError(result.message || 'Scan failed');
                 }
 
             } catch (error) {
-                statusDiv.textContent = 'Error: ' + error.message;
-                statusDiv.className = 'status error';
-                resultsDiv.innerHTML = `
-                    <div class="no-matches">
-                        <div class="no-matches-icon"></div>
-                        <div><strong>Connection Error</strong></div>
-                        <div style="margin-top: 10px;">Make sure Django server is running on port 8000</div>
-                    </div>
-                `;
+                console.error('Scan error:', error);
+                updateStatus('Error', 'error');
+                displayError('Connection error: ' + error.message);
             } finally {
-                scanBtn.disabled = false;
+                startBtn.disabled = false;
+                scanBtn.disabled = true;
+                stopBtn.disabled = true;
             }
         });
 
@@ -556,177 +1041,86 @@
                 stream.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
                 stream = null;
-
-                startBtn.disabled = false;
-                scanBtn.disabled = true;
-                stopBtn.disabled = true;
-
-                faceGuide.classList.remove('active');
-
-                statusDiv.textContent = 'Camera stopped';
-                statusDiv.className = 'status';
             }
+
+            const capturedImg = document.getElementById('capturedImage');
+            if (capturedImg) {
+                capturedImg.style.display = 'none';
+            }
+            video.style.display = 'block';
+            faceGuide.style.display = 'block';
+            document.querySelector('.face-guide-text').style.display = 'block';
+
+            startBtn.disabled = false;
+            scanBtn.disabled = true;
+            stopBtn.disabled = true;
+            faceGuide.classList.remove('active');
+            updateStatus('Stopped', 'ready');
         });
-
-        async function displayMatchedResults(result) {
-            const { person, matches, total_matched_photos, collections_matched, confidence, detection_confidence, threshold_used } = result;
-            const confidencePercent = (confidence * 100).toFixed(1);
-            const detectionPercent = detection_confidence ? (detection_confidence * 100).toFixed(1) : 'N/A';
-            const thresholdPercent = threshold_used ? (threshold_used * 100).toFixed(0) : '85';
-
-            // Use new API response fields
-            const totalPhotosInCollection = person.total_photos_in_collection || person.total_photos || 0;
-            const matchedPhotosCount = total_matched_photos || matches?.length || 0;
-
-            // Determine match quality based on confidence
-            let matchQuality = 'Excellent';
-            let bgColor = '#48bb78';
-            if (confidence < 0.95) {
-                matchQuality = 'Good';
-                bgColor = '#38a169';
-            }
-            if (confidence < 0.90) {
-                matchQuality = 'Moderate';
-                bgColor = '#f6ad55';
-            }
-            if (confidence < 0.85) {
-                matchQuality = 'Low';
-                bgColor = '#fc8181';
-            }
-
-            let html = `
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <div class="stat-label">Match Similarity</div>
-                        <div class="stat-value">${confidencePercent}%</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Detection Quality</div>
-                        <div class="stat-value">${detectionPercent}%</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Matched Photos</div>
-                        <div class="stat-value">${matchedPhotosCount}</div>
-                    </div>
-                </div>
-
-                <div class="match-card">
-                    <div class="match-header">
-                        <div class="match-name">Matched: Person #${person.person_number}</div>
-                        <div class="similarity-badge" style="background: ${bgColor}">
-                            ${matchQuality}
-                        </div>
-                    </div>
-                    ${person.face_image_url ? `
-                    <div style="margin: 15px 0; text-align: center;">
-                        <p style="margin-bottom: 10px; color: #4a5568; font-size: 0.9em;">Best matched face from database:</p>
-                        <img src="${API_URL}${person.face_image_url}"
-                             alt="Matched Person"
-                             style="max-width: 150px; border-radius: 10px; border: 3px solid ${bgColor}; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
-                             onerror="this.style.display='none'">
-                    </div>
-                    ` : ''}
-                    <div class="match-details">
-                        <strong>Face-Level Match Details:</strong><br>
-                        Collection ID: <strong>${person.id}</strong> (Person #${person.person_number})<br>
-                        Best Similarity: <strong>${confidencePercent}%</strong> (threshold: ${thresholdPercent}%)<br>
-                        Face Detection: ${detectionPercent}% confidence<br>
-                        Photos with Your Face: <strong>${matchedPhotosCount}</strong><br>
-                        Total in Collection: <strong>${totalPhotosInCollection}</strong><br>
-                    </div>
-            `;
-
-            // Display matched photos directly from the matches array (face-level results)
-            if (matches && matches.length > 0) {
-                html += `
-                    <div style="margin-top: 15px; padding: 15px; background: #f7fafc; border-radius: 8px;">
-                        <strong style="color: #2d3748;">Photos Containing Your Face (${matches.length} found):</strong>
-                        <div class="images-gallery" style="margin-top: 12px;">
-                          ${matches.map((match, i) => `
-                            <div class="gallery-image" style="position: relative;" onclick="window.open('${API_URL}${match.image_url}', '_blank')">
-                              <img src="${API_URL}${match.image_url}"
-                                   alt="Photo ${i + 1}"
-                                   onerror="this.parentElement.innerHTML='<div class=\\'image-loading\\'>Image unavailable</div>'"
-                                   loading="lazy"
-                                   title="Face ID: ${match.face_id} | Image ID: ${match.image_id} | Similarity: ${(match.similarity * 100).toFixed(1)}%">
-                              <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 5px; font-size: 0.75em; text-align: center;">
-                                ${(match.similarity * 100).toFixed(1)}% match
-                              </div>
-                            </div>
-                          `).join('')}
-                        </div>
-                        <div style="margin-top: 10px; font-size: 0.8em; color: #718096;">
-                            <strong>Debug Info:</strong> Face IDs: [${matches.map(m => m.face_id).join(', ')}] | Image IDs: [${matches.map(m => m.image_id).join(', ')}]
-                        </div>
-                    </div>
-                `;
-            }
-
-            html += '</div>';
-            resultsDiv.innerHTML = html;
-        }
 
         function displayNoMatch(result) {
             const confidence = result.confidence || 0;
             const confidencePercent = (confidence * 100).toFixed(1);
             const dbStatus = result.database_status || {};
-            // Support both old (total_persons) and new (total_face_embeddings) API response
             const totalFaces = dbStatus.total_face_embeddings || dbStatus.total_persons || 0;
-            const thresholdRequired = dbStatus.threshold_required || 0.85;
-
-            // Determine status icon and color
-            let statusIcon = '';
-            let statusColor = '#f6ad55';
-            let statusText = 'Not Found';
-
-            if (dbStatus.status === 'empty') {
-                statusIcon = '';
-                statusColor = '#800020';
-                statusText = 'Empty DB';
-            } else if (dbStatus.status === 'below_threshold') {
-                statusIcon = '';
-                statusColor = '#fc8181';
-                statusText = 'No Match';
-            }
 
             resultsDiv.innerHTML = `
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <div class="stat-label">Best Similarity</div>
-                        <div class="stat-value">${confidencePercent}%</div>
+                <div class="no-match">
+                    <div class="no-match-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
                     </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Status</div>
-                        <div class="stat-value" style="font-size: 1.2em; color: ${statusColor};">${statusText}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Faces in DB</div>
-                        <div class="stat-value">${totalFaces}</div>
-                    </div>
-                </div>
-
-                <div class="no-matches">
-                    <div class="no-matches-icon">${statusIcon}</div>
-                    <div><strong>${dbStatus.status === 'empty' ? 'Database Empty' : 'Face Not Recognized'}</strong></div>
-                    <div style="margin-top: 15px; font-size: 0.95em; color: #4a5568;">
-                        ${result.message || 'Your face was not found in the database.'}
-                    </div>
-                    <div style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; text-align: left;">
-                        <strong style="color: #2d3748;">What to do:</strong>
-                        <ul style="margin-top: 10px; margin-left: 20px; color: #4a5568; line-height: 1.8;">
-                            <li>Upload your photos to events first</li>
-                            <li>Make sure your face is clearly visible in uploaded photos</li>
+                    <h3>${dbStatus.status === 'empty' ? 'No Photos Yet' : 'Face Not Found'}</h3>
+                    <p>${result.message || 'Your face was not found in the photo database.'}</p>
+                    <div class="tips-box">
+                        <h4>What you can do:</h4>
+                        <ul>
+                            <li>Make sure your photos have been uploaded to an event</li>
+                            <li>Ensure your face is clearly visible in the photos</li>
                             <li>Try scanning again with better lighting</li>
                         </ul>
-                    </div>
-                    <div style="margin-top: 15px; font-size: 0.8em; color: #a0aec0;">
-                        Matching threshold: ${(thresholdRequired * 100).toFixed(0)}% similarity required
                     </div>
                 </div>
             `;
         }
 
-        // Check API on load
+        function displayError(message) {
+            resultsDiv.innerHTML = `
+                <div class="no-match">
+                    <div class="no-match-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <h3>Connection Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Download single image
+        async function downloadSingleImage(imageUrl, filename) {
+            try {
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            } catch (error) {
+                alert('Download failed: ' + error.message);
+            }
+        }
+
+        // Initialize
         checkAPI();
     </script>
 </body>

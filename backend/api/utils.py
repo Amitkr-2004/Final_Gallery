@@ -5,14 +5,26 @@ Utility functions for the API app using InsightFace.
 import os
 import cv2
 import numpy as np
+import logging
+from PIL import Image
 from django.conf import settings
 from insightface.app import FaceAnalysis
 
+logger = logging.getLogger(__name__)
 
 # Initialize InsightFace once (global object)
 # This loads the model only once and reuses it for all requests
 face_app = FaceAnalysis(name="buffalo_l")
 face_app.prepare(ctx_id=0, det_size=(640, 640))  # ctx_id=0 → CPU, use -1 if GPU issues
+
+
+# Thumbnail configuration from settings or defaults
+THUMBNAIL_SIZES = getattr(settings, 'THUMBNAIL_SIZES', {
+    'small': (200, 200),
+    'medium': (800, 800),
+})
+THUMBNAIL_QUALITY = getattr(settings, 'THUMBNAIL_QUALITY', 85)
+THUMBNAIL_FORMAT = getattr(settings, 'THUMBNAIL_FORMAT', 'JPEG')
 
 
 def get_image_upload_path(filename):
@@ -183,3 +195,144 @@ def update_daily_statistics(photos_count=1, faces_count=0):
     except Exception as e:
         logger.error(f"[STATISTICS] Failed to update statistics: {str(e)}")
         raise
+
+
+def generate_thumbnail(source_path, dest_path, size, quality=THUMBNAIL_QUALITY):
+    """
+    Generate a thumbnail from an image.
+
+    Args:
+        source_path: Path to the original image
+        dest_path: Path where thumbnail will be saved
+        size: Tuple (width, height) for the thumbnail
+        quality: JPEG quality (1-100)
+
+    Returns:
+        dict: {success: bool, path: str, size: int, error: str}
+    """
+    try:
+        # Open image with PIL
+        with Image.open(source_path) as img:
+            # Convert to RGB if needed (for PNG with transparency)
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+
+            # Calculate aspect ratio preserving resize
+            img.thumbnail(size, Image.Resampling.LANCZOS)
+
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+
+            # Save thumbnail
+            img.save(dest_path, THUMBNAIL_FORMAT, quality=quality, optimize=True)
+
+            file_size = os.path.getsize(dest_path)
+            logger.info(f"[THUMBNAIL] Generated: {dest_path} ({file_size} bytes)")
+
+            return {
+                'success': True,
+                'path': dest_path,
+                'size': file_size,
+                'error': None
+            }
+
+    except Exception as e:
+        logger.error(f"[THUMBNAIL] Failed to generate thumbnail: {e}")
+        return {
+            'success': False,
+            'path': None,
+            'size': 0,
+            'error': str(e)
+        }
+
+
+def generate_thumbnails_for_image(original_path, image_hash):
+    """
+    Generate small and medium thumbnails for an image.
+
+    Args:
+        original_path: Full path to the original image
+        image_hash: Hash of the image (used for filename)
+
+    Returns:
+        dict: {
+            success: bool,
+            thumbnail_small: str (relative path),
+            thumbnail_medium: str (relative path),
+            original_size: int,
+            thumbnail_small_size: int,
+            thumbnail_medium_size: int,
+            error: str
+        }
+    """
+    result = {
+        'success': True,
+        'thumbnail_small': None,
+        'thumbnail_medium': None,
+        'original_size': 0,
+        'thumbnail_small_size': 0,
+        'thumbnail_medium_size': 0,
+        'error': None
+    }
+
+    try:
+        # Get original file size
+        result['original_size'] = os.path.getsize(original_path)
+
+        # Define thumbnail paths
+        thumbnails_dir = os.path.join(settings.MEDIA_ROOT, 'thumbnails')
+        small_dir = os.path.join(thumbnails_dir, 'small')
+        medium_dir = os.path.join(thumbnails_dir, 'medium')
+
+        # Ensure directories exist
+        os.makedirs(small_dir, exist_ok=True)
+        os.makedirs(medium_dir, exist_ok=True)
+
+        # Generate filename
+        thumb_filename = f"{image_hash}.jpg"
+
+        # Generate small thumbnail (200x200)
+        small_path = os.path.join(small_dir, thumb_filename)
+        small_result = generate_thumbnail(
+            original_path,
+            small_path,
+            THUMBNAIL_SIZES['small'],
+            quality=70  # Lower quality for small thumbnails
+        )
+
+        if small_result['success']:
+            result['thumbnail_small'] = f"thumbnails/small/{thumb_filename}"
+            result['thumbnail_small_size'] = small_result['size']
+        else:
+            result['success'] = False
+            result['error'] = f"Small thumbnail failed: {small_result['error']}"
+
+        # Generate medium thumbnail (800x800)
+        medium_path = os.path.join(medium_dir, thumb_filename)
+        medium_result = generate_thumbnail(
+            original_path,
+            medium_path,
+            THUMBNAIL_SIZES['medium'],
+            quality=THUMBNAIL_QUALITY
+        )
+
+        if medium_result['success']:
+            result['thumbnail_medium'] = f"thumbnails/medium/{thumb_filename}"
+            result['thumbnail_medium_size'] = medium_result['size']
+        else:
+            result['success'] = False
+            result['error'] = f"Medium thumbnail failed: {medium_result['error']}"
+
+        # Log compression stats
+        if result['success']:
+            original_kb = result['original_size'] / 1024
+            small_kb = result['thumbnail_small_size'] / 1024
+            medium_kb = result['thumbnail_medium_size'] / 1024
+            logger.info(f"[THUMBNAIL] Stats: Original={original_kb:.1f}KB, Small={small_kb:.1f}KB, Medium={medium_kb:.1f}KB")
+
+    except Exception as e:
+        result['success'] = False
+        result['error'] = str(e)
+        logger.error(f"[THUMBNAIL] Failed to generate thumbnails: {e}")
+
+    return result

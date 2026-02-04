@@ -267,25 +267,61 @@ function Dashboard() {
             </>
           ) : (
             <div className="upload-progress-container">
-              <div className="upload-progress-icon">
-                {uploadProgress?.complete ? (
-                  uploadProgress.cancelled > 0 ? (
-                    <Ban size={60} style={{ color: '#ef4444' }} />
-                  ) : uploadProgress.failed === 0 ? (
-                    uploadProgress.success === 0 ? (
-                      <AlertCircle size={60} style={{ color: '#DAA520' }} />
+              {/* Circular Progress */}
+              <div className="circular-progress-wrapper">
+                <div className="circular-progress">
+                  <svg className="progress-ring" viewBox="0 0 120 120">
+                    <circle
+                      className="progress-ring-bg"
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      strokeWidth="8"
+                    />
+                    <circle
+                      className="progress-ring-fill"
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      style={{
+                        strokeDasharray: `${2 * Math.PI * 52}`,
+                        strokeDashoffset: `${2 * Math.PI * 52 * (1 - (uploadProgress?.total > 0 ? uploadProgress.current / uploadProgress.total : 0))}`,
+                        stroke: uploadProgress?.complete
+                          ? uploadProgress.cancelled > 0 ? '#ef4444'
+                            : uploadProgress.failed > 0 ? '#f59e0b'
+                            : '#22c55e'
+                          : '#ffffff'
+                      }}
+                    />
+                  </svg>
+                  <div className="progress-center">
+                    {uploadProgress?.complete ? (
+                      uploadProgress.cancelled > 0 ? (
+                        <Ban size={36} color="#ef4444" />
+                      ) : uploadProgress.failed === 0 ? (
+                        uploadProgress.success === 0 ? (
+                          <AlertCircle size={36} color="#f59e0b" />
+                        ) : (
+                          <CheckCircle size={36} color="#22c55e" />
+                        )
+                      ) : (
+                        <AlertCircle size={36} color="#f59e0b" />
+                      )
                     ) : (
-                      <CheckCircle size={60} style={{ color: '#228B22' }} />
-                    )
-                  ) : (
-                    <AlertCircle size={60} style={{ color: '#f59e0b' }} />
-                  )
-                ) : (
-                  <Loader2 size={60} className="spin-animation" />
-                )}
+                      <span className="progress-percentage">
+                        {uploadProgress?.total > 0 ? Math.round((uploadProgress.current / uploadProgress.total) * 100) : 0}%
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <h3 className="upload-progress-title">
+              {/* Status Title */}
+              <h3 className="upload-status-title">
                 {uploadProgress?.complete
                   ? uploadProgress.cancelled > 0
                     ? 'Upload Cancelled'
@@ -293,74 +329,69 @@ function Dashboard() {
                       ? uploadProgress.success === 0
                         ? 'All Images Already Exist'
                         : 'Upload Complete!'
-                      : 'Upload Completed with Errors'
-                  : `Uploading... (${uploadProgress?.current || 0}/${uploadProgress?.total || 0})`
+                      : 'Completed with Errors'
+                  : 'Uploading Photos'
                 }
               </h3>
 
-              {uploadProgress && !uploadProgress.complete && uploadProgress.currentFile && (
-                <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {uploadProgress.currentFile}
+              {/* File Counter */}
+              {uploadProgress && !uploadProgress.complete && (
+                <p className="upload-file-counter">
+                  {uploadProgress.current} of {uploadProgress.total} files
                 </p>
               )}
 
-              {/* Progress Bar */}
-              {uploadProgress && (
-                <div style={{
-                  width: '100%',
-                  maxWidth: '400px',
-                  height: '12px',
-                  backgroundColor: '#E8C4C4',
-                  borderRadius: '6px',
-                  overflow: 'hidden',
-                  margin: '15px 0'
-                }}>
-                  <div style={{
-                    width: `${uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0}%`,
-                    height: '100%',
-                    backgroundColor: uploadProgress.cancelled > 0 ? '#ef4444' : '#800020',
-                    borderRadius: '6px',
-                    transition: 'width 0.3s ease'
-                  }} />
-                </div>
+              {/* Current File Name */}
+              {uploadProgress && !uploadProgress.complete && uploadProgress.currentFile && (
+                <p className="upload-current-file">
+                  {uploadProgress.currentFile.split('/').pop().split('\\').pop()}
+                </p>
               )}
 
+              {/* Stats Grid */}
               {uploadProgress && (
-                <div className="upload-progress-stats">
-                  <p><CheckCircle size={16} style={{ marginRight: '8px', color: '#228B22' }} /> Success: {uploadProgress.success}</p>
-                  {uploadProgress.skipped > 0 && <p><SkipForward size={16} style={{ marginRight: '8px', color: '#DAA520' }} /> Skipped (Duplicates): {uploadProgress.skipped}</p>}
-                  {uploadProgress.failed > 0 && <p><XCircle size={16} style={{ marginRight: '8px', color: '#ef4444' }} /> Failed: {uploadProgress.failed}</p>}
-                  {uploadProgress.cancelled > 0 && <p><Ban size={16} style={{ marginRight: '8px', color: '#ef4444' }} /> Cancelled: {uploadProgress.cancelled}</p>}
-                  <p><BarChart3 size={16} style={{ marginRight: '8px', color: '#800020' }} /> Total: {uploadProgress.total}</p>
+                <div className="upload-stats-grid">
+                  <div className="upload-stat-item success">
+                    <CheckCircle size={18} />
+                    <span className="stat-number">{uploadProgress.success}</span>
+                    <span className="stat-text">Uploaded</span>
+                  </div>
+                  {uploadProgress.skipped > 0 && (
+                    <div className="upload-stat-item skipped">
+                      <SkipForward size={18} />
+                      <span className="stat-number">{uploadProgress.skipped}</span>
+                      <span className="stat-text">Skipped</span>
+                    </div>
+                  )}
+                  {uploadProgress.failed > 0 && (
+                    <div className="upload-stat-item failed">
+                      <XCircle size={18} />
+                      <span className="stat-number">{uploadProgress.failed}</span>
+                      <span className="stat-text">Failed</span>
+                    </div>
+                  )}
+                  {uploadProgress.cancelled > 0 && (
+                    <div className="upload-stat-item cancelled">
+                      <Ban size={18} />
+                      <span className="stat-number">{uploadProgress.cancelled}</span>
+                      <span className="stat-text">Cancelled</span>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Cancel Button */}
               {uploadProgress && !uploadProgress.complete && (
-                <button
-                  onClick={handleCancelUpload}
-                  style={{
-                    marginTop: '15px',
-                    padding: '10px 24px',
-                    fontSize: '14px',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <Ban size={16} /> Cancel Upload
+                <button className="cancel-upload-btn" onClick={handleCancelUpload}>
+                  <XCircle size={18} />
+                  Cancel
                 </button>
               )}
 
+              {/* Redirect Message */}
               {uploadProgress?.complete && uploadProgress.cancelled === 0 && uploadProgress.failed === 0 && uploadProgress.success > 0 && (
                 <p className="upload-redirect-message">
-                  Redirecting to gallery...
+                  Opening gallery...
                 </p>
               )}
             </div>

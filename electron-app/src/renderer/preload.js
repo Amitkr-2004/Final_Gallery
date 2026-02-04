@@ -87,6 +87,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     cleanupTemp: () => ipcRenderer.invoke('core:scanner:cleanup-temp')
   },
 
+  // Download APIs
+  download: {
+    selectFolder: () => ipcRenderer.invoke('core:download:select-folder'),
+    downloadImage: (imageId, savePath) => ipcRenderer.invoke('core:download:image', { imageId, savePath }),
+    downloadCollection: (collectionId, savePath) => ipcRenderer.invoke('core:download:collection', { collectionId, savePath }),
+    downloadImages: (imageIds, savePath) => ipcRenderer.invoke('core:download:images', { imageIds, savePath }),
+    getInfo: (imageId) => ipcRenderer.invoke('core:download:get-info', imageId),
+    onProgress: (callback) => {
+      const handler = (event, progress) => callback(progress);
+      ipcRenderer.on('download:progress', handler);
+      return () => ipcRenderer.removeListener('download:progress', handler);
+    }
+  },
+
   // Navigation API (for tray menu)
   onNavigate: (callback) => {
     ipcRenderer.on('navigate-to', (event, route) => callback(route));

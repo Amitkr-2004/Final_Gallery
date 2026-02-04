@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Photo, Person, PersonPhoto, DailyStatistics
 from .serializers import ImageUploadSerializer, PhotoSerializer, PersonSerializer, DailyStatisticsSerializer
-from .utils import get_image_upload_path, detect_faces_from_file, detect_faces_and_extract_embeddings, update_daily_statistics
+from .utils import get_image_upload_path, detect_faces_from_file, detect_faces_and_extract_embeddings, update_daily_statistics, generate_thumbnails_for_image
 from .faiss_manager import get_faiss_manager
 from .face_faiss_manager import get_face_faiss_manager
 from .gcs_service import sync_photo_to_gcs, is_gcs_configured
@@ -187,6 +187,17 @@ def upload_image(request):
 
         # Log after successful creation
         logger.info(f"[PHOTO_CREATE] Photo record created successfully: photo_id={photo.id}, file_path={photo.file_path}, event_id={photo.event_id}, status={photo.status}")
+
+        # Generate thumbnails for the uploaded image
+        thumbnail_result = generate_thumbnails_for_image(image_path, image_hash)
+        if thumbnail_result['success']:
+            # Update Photo record with thumbnail paths
+            photo.thumbnail_small = thumbnail_result['thumbnail_small']
+            photo.thumbnail_medium = thumbnail_result['thumbnail_medium']
+            photo.save(update_fields=['thumbnail_small', 'thumbnail_medium'])
+            logger.info(f"[THUMBNAIL] Photo {photo.id} thumbnails saved: small={photo.thumbnail_small}, medium={photo.thumbnail_medium}")
+        else:
+            logger.warning(f"[THUMBNAIL] Failed to generate thumbnails for photo {photo.id}: {thumbnail_result['error']}")
         
         # Detect faces and extract embeddings (only clear, well-detected faces)
         # Filter by detection confidence to avoid creating collections for unclear/blurry faces
