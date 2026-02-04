@@ -324,6 +324,128 @@
             cursor: not-allowed;
         }
 
+        .btn-upload {
+            background: linear-gradient(135deg, #DAA520, #B8860B);
+            color: white;
+        }
+
+        .btn-upload:hover:not(:disabled) {
+            background: linear-gradient(135deg, #B8860B, #996515);
+        }
+
+        /* Upload Divider */
+        .controls-divider {
+            display: flex;
+            align-items: center;
+            margin: 16px 0;
+            color: #86868b;
+            font-size: 13px;
+        }
+
+        .controls-divider::before,
+        .controls-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e5e5e7;
+        }
+
+        .controls-divider span {
+            padding: 0 12px;
+        }
+
+        /* Upload Drop Zone */
+        .upload-zone {
+            border: 2px dashed #e5e5e7;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        .upload-zone:hover {
+            border-color: #800020;
+            background: #fff8f8;
+        }
+
+        .upload-zone.drag-over {
+            border-color: #30d158;
+            background: #e8f8ec;
+        }
+
+        .upload-zone-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 12px;
+            color: #86868b;
+        }
+
+        .upload-zone:hover .upload-zone-icon {
+            color: #800020;
+        }
+
+        .upload-zone-text {
+            font-size: 14px;
+            color: #6e6e73;
+            margin-bottom: 8px;
+        }
+
+        .upload-zone-hint {
+            font-size: 12px;
+            color: #86868b;
+        }
+
+        .upload-preview {
+            display: none;
+            position: relative;
+            margin-top: 16px;
+        }
+
+        .upload-preview.active {
+            display: block;
+        }
+
+        .upload-preview img {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .upload-preview-clear {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .upload-preview-clear:hover {
+            background: rgba(0,0,0,0.8);
+        }
+
+        .upload-preview-clear svg {
+            width: 16px;
+            height: 16px;
+            color: white;
+        }
+
+        /* Hidden file input */
+        .file-input-hidden {
+            display: none;
+        }
+
         /* Floating Scan Again Button */
         .floating-scan-btn {
             position: fixed;
@@ -673,6 +795,230 @@
             color: #800020;
             text-decoration: none;
         }
+
+        /* Pagination Styles */
+        .pagination-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            margin-top: 32px;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #86868b;
+        }
+
+        .pagination-info strong {
+            color: #1d1d1f;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-pages {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pagination-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            padding: 0 12px;
+            border: 2px solid #e5e5e7;
+            border-radius: 10px;
+            background: white;
+            color: #1d1d1f;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            border-color: #800020;
+            color: #800020;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .pagination-nav {
+            padding: 0 8px;
+        }
+
+        .pagination-nav svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .pagination-number {
+            min-width: 40px;
+        }
+
+        .pagination-number.active {
+            background: #800020;
+            border-color: #800020;
+            color: white;
+        }
+
+        .pagination-number.active:hover {
+            background: #6a001a;
+            border-color: #6a001a;
+            color: white;
+        }
+
+        .pagination-ellipsis {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 40px;
+            color: #86868b;
+            font-size: 14px;
+        }
+
+        .pagination-jump {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #86868b;
+        }
+
+        .pagination-input {
+            width: 60px;
+            height: 36px;
+            padding: 0 8px;
+            border: 2px solid #e5e5e7;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .pagination-input:focus {
+            border-color: #800020;
+        }
+
+        .pagination-input::-webkit-outer-spin-button,
+        .pagination-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .pagination-input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Gallery Header */
+        .gallery-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding: 16px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .gallery-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .gallery-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .gallery-header .badge {
+            padding: 4px 12px;
+            background: #e8f8ec;
+            color: #1d7a3e;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* Responsive Pagination */
+        @media (max-width: 768px) {
+            .pagination-container {
+                padding: 16px;
+            }
+
+            .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .pagination-pages {
+                order: -1;
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 12px;
+            }
+
+            .pagination-btn {
+                min-width: 36px;
+                height: 36px;
+                font-size: 13px;
+            }
+
+            .pagination-number {
+                min-width: 36px;
+            }
+
+            .pagination-jump {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .gallery-header {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .pagination-btn {
+                min-width: 32px;
+                height: 32px;
+                padding: 0 6px;
+            }
+
+            .pagination-number {
+                min-width: 32px;
+            }
+
+            .pagination-ellipsis {
+                min-width: 24px;
+            }
+
+            .pagination-input {
+                width: 50px;
+                height: 32px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -700,7 +1046,7 @@
             <div class="page-header">
                 <div class="page-header-left">
                     <h1 class="page-title">Face Scanner</h1>
-                    <p class="page-subtitle">Find your photos using AI-powered face recognition</p>
+                    <p class="page-subtitle">Scan your face or upload an image to find matching photos</p>
                 </div>
             </div>
 
@@ -745,6 +1091,43 @@
                                 Stop
                             </button>
                         </div>
+
+                        <!-- Image Upload Section -->
+                        <div class="controls-divider">
+                            <span>or upload an image</span>
+                        </div>
+
+                        <input type="file" id="imageUploadInput" class="file-input-hidden" accept="image/*">
+
+                        <div id="uploadZone" class="upload-zone">
+                            <svg class="upload-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <div class="upload-zone-text">Click or drag an image here</div>
+                            <div class="upload-zone-hint">Supports JPG, PNG, WebP</div>
+                        </div>
+
+                        <div id="uploadPreview" class="upload-preview">
+                            <img id="uploadPreviewImg" src="" alt="Upload preview">
+                            <button class="upload-preview-clear" onclick="clearUploadPreview()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="controls" id="uploadControls" style="display: none;">
+                            <button id="scanUploadBtn" class="btn btn-upload">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                Scan Uploaded Image
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -768,7 +1151,7 @@
                                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                             </svg>
-                            <p>Start camera and scan your face to find matching photos</p>
+                            <p>Scan your face with camera or upload an image to find matching photos</p>
                         </div>
                     </div>
                 </div>
@@ -786,9 +1169,59 @@
                 Scan Again
             </button>
 
+            <!-- Gallery Header -->
+            <div class="gallery-header">
+                <div class="gallery-header-left">
+                    <h2>Matching Photos</h2>
+                    <span class="badge" id="totalPhotosCount">0 photos</span>
+                </div>
+                <div class="pagination-info" id="paginationInfoTop">
+                    Page <strong id="currentPageTop">1</strong> of <strong id="totalPagesTop">1</strong>
+                </div>
+            </div>
+
             <!-- Pinterest Masonry Grid -->
             <div class="masonry-grid" id="masonryGrid">
                 <!-- Will be populated dynamically -->
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-container" id="paginationContainer">
+                <div class="pagination-info">
+                    Showing <strong id="showingStart">1</strong>-<strong id="showingEnd">20</strong> of <strong id="totalCount">0</strong> photos
+                </div>
+                <div class="pagination">
+                    <button class="pagination-btn pagination-nav" id="firstPageBtn" onclick="goToPage(1)" title="First page">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="11 17 6 12 11 7"></polyline>
+                            <polyline points="18 17 13 12 18 7"></polyline>
+                        </svg>
+                    </button>
+                    <button class="pagination-btn pagination-nav" id="prevPageBtn" onclick="goToPrevPage()" title="Previous page">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <div class="pagination-pages" id="paginationPages">
+                        <!-- Page numbers will be generated dynamically -->
+                    </div>
+                    <button class="pagination-btn pagination-nav" id="nextPageBtn" onclick="goToNextPage()" title="Next page">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                    <button class="pagination-btn pagination-nav" id="lastPageBtn" onclick="goToLastPage()" title="Last page">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="13 17 18 12 13 7"></polyline>
+                            <polyline points="6 17 11 12 6 7"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <div class="pagination-jump">
+                    <span>Go to page:</span>
+                    <input type="number" class="pagination-input" id="pageJumpInput" min="1" onkeypress="handlePageJump(event)">
+                    <button class="pagination-btn" onclick="jumpToPage()">Go</button>
+                </div>
             </div>
         </div>
     </main>
@@ -839,12 +1272,140 @@
         let stream = null;
         let currentMatches = [];
         let currentLightboxUrl = '';
+        let uploadedFile = null;
 
-        // Lazy loading configuration
-        const IMAGES_PER_BATCH = 12;
+        // Upload elements
+        const imageUploadInput = document.getElementById('imageUploadInput');
+        const uploadZone = document.getElementById('uploadZone');
+        const uploadPreview = document.getElementById('uploadPreview');
+        const uploadPreviewImg = document.getElementById('uploadPreviewImg');
+        const uploadControls = document.getElementById('uploadControls');
+        const scanUploadBtn = document.getElementById('scanUploadBtn');
+
+        // Pagination configuration
+        const IMAGES_PER_PAGE = 20;
+        let currentPage = 1;
+        let totalPages = 1;
         let displayedCount = 0;
         let isLoadingMore = false;
         let lazyLoadObserver = null;
+
+        // Upload zone click handler
+        uploadZone.addEventListener('click', () => {
+            imageUploadInput.click();
+        });
+
+        // File input change handler
+        imageUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileSelect(file);
+            }
+        });
+
+        // Drag and drop handlers
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleFileSelect(file);
+            } else {
+                alert('Please drop an image file (JPG, PNG, WebP)');
+            }
+        });
+
+        // Handle file selection
+        function handleFileSelect(file) {
+            uploadedFile = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadPreviewImg.src = e.target.result;
+                uploadPreview.classList.add('active');
+                uploadZone.style.display = 'none';
+                uploadControls.style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Clear upload preview
+        function clearUploadPreview() {
+            uploadedFile = null;
+            uploadPreviewImg.src = '';
+            uploadPreview.classList.remove('active');
+            uploadZone.style.display = 'block';
+            uploadControls.style.display = 'none';
+            imageUploadInput.value = '';
+        }
+
+        // Scan uploaded image
+        scanUploadBtn.addEventListener('click', async () => {
+            if (!uploadedFile) {
+                alert('Please select an image first');
+                return;
+            }
+
+            const apiOk = await checkAPI();
+            if (!apiOk) {
+                alert('Server not running. Start Django with: python manage.py runserver');
+                return;
+            }
+
+            try {
+                scanUploadBtn.disabled = true;
+                updateStatus('Scanning...', 'scanning');
+
+                resultsDiv.innerHTML = `
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Analyzing uploaded image with AI...</p>
+                    </div>
+                `;
+
+                const formData = new FormData();
+                formData.append('image', uploadedFile, uploadedFile.name);
+
+                const response = await fetch(`${API_URL}/api/collection/scan-face/`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.matched && result.matches && result.matches.length > 0) {
+                        // Show Pinterest gallery
+                        showGallery(result);
+                    } else {
+                        // No match - show in scanner view
+                        displayNoMatch(result);
+                    }
+                    updateStatus('Complete', 'ready');
+                } else {
+                    updateStatus('Failed', 'error');
+                    displayError(result.message || 'Scan failed');
+                }
+
+            } catch (error) {
+                console.error('Upload scan error:', error);
+                updateStatus('Error', 'error');
+                displayError('Connection error: ' + error.message);
+            } finally {
+                scanUploadBtn.disabled = false;
+            }
+        });
 
         // Update status badge
         function updateStatus(text, type) {
@@ -872,10 +1433,9 @@
 
         // Show Scanner View
         function showScanner() {
-            // Clean up lazy load observer
-            if (lazyLoadObserver) {
-                lazyLoadObserver.disconnect();
-            }
+            // Reset pagination state
+            currentPage = 1;
+            totalPages = 1;
             displayedCount = 0;
             currentMatches = [];
 
@@ -891,6 +1451,9 @@
             faceGuide.style.display = 'block';
             document.querySelector('.face-guide-text').style.display = 'block';
 
+            // Reset upload UI
+            clearUploadPreview();
+
             // Reset results
             resultsDiv.innerHTML = `
                 <div class="results-placeholder">
@@ -900,30 +1463,192 @@
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                     </svg>
-                    <p>Start camera and scan your face to find matching photos</p>
+                    <p>Scan your face with camera or upload an image to find matching photos</p>
                 </div>
             `;
 
             updateStatus('Ready', 'ready');
         }
 
-        // Show Gallery View (Clean Pinterest Style - No Headers) with Lazy Loading
+        // Show Gallery View with Pagination
         function showGallery(result) {
             scannerView.classList.add('hidden');
             galleryView.classList.add('active');
 
             const { matches } = result;
             currentMatches = matches;
+            currentPage = 1;
+            totalPages = Math.ceil(matches.length / IMAGES_PER_PAGE);
+
+            // Update total photos count
+            document.getElementById('totalPhotosCount').textContent = `${matches.length} photo${matches.length !== 1 ? 's' : ''}`;
+
+            // Load first page
+            loadPage(1);
+        }
+
+        // Load a specific page
+        function loadPage(page) {
+            if (page < 1 || page > totalPages) return;
+
+            currentPage = page;
             displayedCount = 0;
 
-            // Clear grid and add initial batch
+            // Clear grid
             masonryGrid.innerHTML = '';
 
-            // Load initial batch
-            loadMoreImages();
+            // Calculate start and end indices for this page
+            const startIndex = (page - 1) * IMAGES_PER_PAGE;
+            const endIndex = Math.min(startIndex + IMAGES_PER_PAGE, currentMatches.length);
 
-            // Setup Intersection Observer for infinite scroll
-            setupLazyLoadObserver();
+            // Create masonry items for this page
+            const fragment = document.createDocumentFragment();
+            for (let i = startIndex; i < endIndex; i++) {
+                const item = createMasonryItem(currentMatches[i], i);
+                fragment.appendChild(item);
+            }
+            masonryGrid.appendChild(fragment);
+
+            // Update pagination UI
+            updatePaginationUI(startIndex, endIndex);
+
+            // Scroll to top smoothly
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Update pagination UI elements
+        function updatePaginationUI(startIndex, endIndex) {
+            // Update info displays
+            document.getElementById('currentPageTop').textContent = currentPage;
+            document.getElementById('totalPagesTop').textContent = totalPages;
+            document.getElementById('showingStart').textContent = currentMatches.length > 0 ? startIndex + 1 : 0;
+            document.getElementById('showingEnd').textContent = endIndex;
+            document.getElementById('totalCount').textContent = currentMatches.length;
+
+            // Update page jump input max
+            document.getElementById('pageJumpInput').max = totalPages;
+            document.getElementById('pageJumpInput').value = '';
+
+            // Update navigation button states
+            document.getElementById('firstPageBtn').disabled = currentPage === 1;
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
+            document.getElementById('lastPageBtn').disabled = currentPage === totalPages;
+
+            // Show/hide pagination container based on total pages
+            document.getElementById('paginationContainer').style.display = totalPages > 1 ? 'flex' : 'none';
+
+            // Generate page numbers
+            generatePageNumbers();
+        }
+
+        // Generate page number buttons with ellipsis
+        function generatePageNumbers() {
+            const paginationPages = document.getElementById('paginationPages');
+            paginationPages.innerHTML = '';
+
+            const pageNumbers = getPageNumbers();
+
+            pageNumbers.forEach(pageNum => {
+                if (pageNum === '...') {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'pagination-ellipsis';
+                    ellipsis.textContent = '...';
+                    paginationPages.appendChild(ellipsis);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = `pagination-btn pagination-number${pageNum === currentPage ? ' active' : ''}`;
+                    btn.textContent = pageNum;
+                    btn.onclick = () => goToPage(pageNum);
+                    paginationPages.appendChild(btn);
+                }
+            });
+        }
+
+        // Get array of page numbers to display (with ellipsis for large ranges)
+        function getPageNumbers() {
+            const pages = [];
+            const maxVisible = 7;
+
+            if (totalPages <= maxVisible) {
+                for (let i = 1; i <= totalPages; i++) {
+                    pages.push(i);
+                }
+            } else {
+                // Always show first page
+                pages.push(1);
+
+                if (currentPage > 3) {
+                    pages.push('...');
+                }
+
+                // Calculate range around current page
+                let start = Math.max(2, currentPage - 1);
+                let end = Math.min(totalPages - 1, currentPage + 1);
+
+                // Adjust if at the start
+                if (currentPage <= 3) {
+                    end = 4;
+                }
+
+                // Adjust if at the end
+                if (currentPage >= totalPages - 2) {
+                    start = totalPages - 3;
+                }
+
+                for (let i = start; i <= end; i++) {
+                    pages.push(i);
+                }
+
+                if (currentPage < totalPages - 2) {
+                    pages.push('...');
+                }
+
+                // Always show last page
+                pages.push(totalPages);
+            }
+
+            return pages;
+        }
+
+        // Navigation functions
+        function goToPage(page) {
+            if (page >= 1 && page <= totalPages && page !== currentPage) {
+                loadPage(page);
+            }
+        }
+
+        function goToPrevPage() {
+            if (currentPage > 1) {
+                loadPage(currentPage - 1);
+            }
+        }
+
+        function goToNextPage() {
+            if (currentPage < totalPages) {
+                loadPage(currentPage + 1);
+            }
+        }
+
+        function goToLastPage() {
+            if (currentPage !== totalPages) {
+                loadPage(totalPages);
+            }
+        }
+
+        function jumpToPage() {
+            const input = document.getElementById('pageJumpInput');
+            const page = parseInt(input.value, 10);
+            if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                goToPage(page);
+            }
+            input.value = '';
+        }
+
+        function handlePageJump(event) {
+            if (event.key === 'Enter') {
+                jumpToPage();
+            }
         }
 
         // Create HTML for a single masonry item
@@ -951,80 +1676,8 @@
             return div;
         }
 
-        // Load more images into the grid
-        function loadMoreImages() {
-            if (isLoadingMore || displayedCount >= currentMatches.length) return;
-
-            isLoadingMore = true;
-
-            // Remove existing sentinel if present
-            const existingSentinel = document.getElementById('loadMoreSentinel');
-            if (existingSentinel) {
-                existingSentinel.remove();
-            }
-
-            // Get next batch of images
-            const endIndex = Math.min(displayedCount + IMAGES_PER_BATCH, currentMatches.length);
-            const fragment = document.createDocumentFragment();
-
-            for (let i = displayedCount; i < endIndex; i++) {
-                const item = createMasonryItem(currentMatches[i], i);
-                fragment.appendChild(item);
-            }
-
-            masonryGrid.appendChild(fragment);
-            displayedCount = endIndex;
-
-            // Add sentinel for loading more if there are remaining images
-            if (displayedCount < currentMatches.length) {
-                const sentinel = document.createElement('div');
-                sentinel.id = 'loadMoreSentinel';
-                sentinel.className = 'load-more-sentinel';
-                sentinel.innerHTML = `
-                    <div class="loading-more">
-                        <div class="spinner-small"></div>
-                        <span>Loading more photos...</span>
-                    </div>
-                `;
-                masonryGrid.appendChild(sentinel);
-
-                // Observe the new sentinel
-                if (lazyLoadObserver) {
-                    lazyLoadObserver.observe(sentinel);
-                }
-            }
-
-            isLoadingMore = false;
-        }
-
-        // Setup Intersection Observer for lazy loading
-        function setupLazyLoadObserver() {
-            // Disconnect existing observer
-            if (lazyLoadObserver) {
-                lazyLoadObserver.disconnect();
-            }
-
-            // Create new observer
-            lazyLoadObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting && !isLoadingMore) {
-                        // Small delay to allow images to render smoothly
-                        setTimeout(() => {
-                            loadMoreImages();
-                        }, 100);
-                    }
-                });
-            }, {
-                rootMargin: '200px', // Start loading before sentinel is visible
-                threshold: 0.1
-            });
-
-            // Observe initial sentinel if exists
-            const sentinel = document.getElementById('loadMoreSentinel');
-            if (sentinel) {
-                lazyLoadObserver.observe(sentinel);
-            }
-        }
+        // Note: Lazy loading has been replaced with pagination (20 images per page)
+        // The loadPage() function now handles displaying images for each page
 
         // Lightbox functions
         function openLightbox(imageUrl, filename) {

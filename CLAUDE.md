@@ -67,6 +67,8 @@ Face Gallery is a desktop application that automatically:
 - **Lightbox Image Viewer** - Full-screen viewing with download option
 - **Lazy Loading Gallery** - Images load progressively as user scrolls
 - **Gallery Pagination** - 20 images per page with navigation controls
+- **Scanner Results Pagination** - 20 images per page in scanner results with navigation
+- **Dual-mode Face Scanner** - Camera capture or image upload for face matching
 
 ---
 
@@ -616,6 +618,92 @@ http://localhost:8088/camera-scanner.html
 - **File Modified:**
   - `camera-scanner.html` - Added lazy loading logic and loading indicator styles
 
+### Stage 12: Image Upload for Face Scanner ✅
+- **Objective:** Allow users to upload images for face matching in addition to camera capture
+- **Implementation:**
+  - Dual-mode interface: Camera scan OR image upload
+  - Drag-and-drop upload zone with visual feedback
+  - Click-to-upload with file browser
+  - Image preview before scanning
+  - Same face detection pipeline for both methods
+  - Consistent result display (Pinterest gallery)
+- **User Flow:**
+  1. Option A: Start camera → Capture → Scan
+  2. Option B: Click/drag upload zone → Select image → Preview → Scan
+  3. Both methods show same Pinterest gallery results
+- **UI Components:**
+  - Upload zone with drag-over styling
+  - Image preview with clear button
+  - "Scan Uploaded Image" button (gold accent)
+  - "or upload an image" divider
+- **Technical Details:**
+  ```javascript
+  // File selection handling
+  function handleFileSelect(file) {
+    uploadedFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      uploadPreviewImg.src = e.target.result;
+      uploadPreview.classList.add('active');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Scan uploaded image using same API
+  const formData = new FormData();
+  formData.append('image', uploadedFile, uploadedFile.name);
+  await fetch(`${API_URL}/api/collection/scan-face/`, { method: 'POST', body: formData });
+  ```
+- **Benefits:**
+  - Flexibility for users without camera access
+  - Upload existing photos for face matching
+  - Works on both Windows and macOS
+  - No camera permissions required for upload method
+- **File Modified:**
+  - `camera-scanner.html` - Added upload UI, handlers, and styling
+
+### Stage 13: Scanner Results Pagination ✅
+- **Objective:** Add pagination to scanner results for better performance with large result sets
+- **Implementation:**
+  - 20 images per page (IMAGES_PER_PAGE = 20)
+  - Replaced infinite scroll with page-based navigation
+  - First/Prev/Next/Last navigation buttons
+  - Smart page number display with ellipsis for large ranges
+  - Page jump input for direct navigation
+  - Results header showing total photos and current page
+- **User Flow:**
+  1. Scan face or upload image
+  2. Results show in paginated Pinterest grid
+  3. Navigate between pages with controls
+  4. Smooth scroll to top on page change
+- **UI Components:**
+  - Gallery header with photo count and page info
+  - Pagination container with navigation buttons
+  - Page number buttons with active state
+  - Page jump input with Go button
+- **Technical Details:**
+  ```javascript
+  // Configuration
+  const IMAGES_PER_PAGE = 20;
+  let currentPage = 1;
+  let totalPages = Math.ceil(matches.length / IMAGES_PER_PAGE);
+
+  // Load specific page
+  function loadPage(page) {
+    const startIndex = (page - 1) * IMAGES_PER_PAGE;
+    const endIndex = Math.min(startIndex + IMAGES_PER_PAGE, currentMatches.length);
+    // Render images for this page...
+    updatePaginationUI(startIndex, endIndex);
+  }
+  ```
+- **Benefits:**
+  - Better performance with large result sets
+  - Predictable navigation experience
+  - Reduced memory usage
+  - Works consistently on Windows and macOS
+- **File Modified:**
+  - `camera-scanner.html` - Added pagination UI, styles, and navigation logic
+
 ---
 
 ## 🧪 Testing Guide
@@ -1079,10 +1167,25 @@ For issues and questions:
 ---
 
 **Last Updated:** February 4, 2026
-**Version:** 1.3.1
+**Version:** 1.3.3
 **Status:** Production Ready ✅
 
 ### Changelog
+
+#### v1.3.3 (February 4, 2026)
+- ✅ **Scanner Results Pagination** - 20 images per page for better performance
+- ✅ **Page Navigation** - First/Prev/Next/Last buttons with page numbers
+- ✅ **Page Jump Input** - Direct input to jump to specific page
+- ✅ **Smart Page Numbers** - Ellipsis for large page counts
+- ✅ **Results Header** - Shows total photos and current page info
+- ✅ **Cross-platform** - Works consistently on both Windows and macOS
+
+#### v1.3.2 (February 4, 2026)
+- ✅ **Image Upload for Scanner** - Upload images for face matching alongside camera capture
+- ✅ **Drag-and-Drop Upload** - Drag images directly onto upload zone
+- ✅ **Upload Preview** - Preview uploaded image before scanning
+- ✅ **Dual-mode Scanner** - Choose between camera or upload for face detection
+- ✅ **Cross-platform Support** - Works on both Windows and macOS without camera
 
 #### v1.3.1 (February 4, 2026)
 - ✅ **Gallery Pagination** - 20 images per page for better performance
